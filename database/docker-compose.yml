@@ -1,0 +1,65 @@
+# docker-compose do banco de dados do Byte Estoque (CRM + Estoque + Financeiro).
+#
+# Sobe um MySQL 8.0 isolado, com o schema do projeto aplicado automaticamente
+# na primeira inicializacao. Nada eh instalado no Windows: tudo fica no Docker.
+#
+# Uso rapido (a partir da pasta database/):
+#   docker compose up -d
+#
+# Os nomes de container/volume/network usam o prefixo "byte_estoque" para nao
+# conflitar com outros projetos Docker da maquina.
+
+name: byte-estoque
+
+services:
+  mysql:
+    image: mysql:8.0.43
+    container_name: byte_estoque_mysql
+    restart: unless-stopped
+
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?defina MYSQL_ROOT_PASSWORD no arquivo database/.env}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-crm_estoque}
+      MYSQL_USER: ${MYSQL_USER:-app_crm}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?defina MYSQL_PASSWORD no arquivo database/.env}
+
+      LANG: C.UTF-8
+      TZ: America/Sao_Paulo
+
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+      - ./init:/docker-entrypoint-initdb.d:ro
+
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --lower-case-table-names=0
+      - --innodb-buffer-pool-size=256M
+      - --log-error-verbosity=2
+
+    healthcheck:
+      # "healthy" somente quando o MySQL responde de verdade a uma consulta.
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h 127.0.0.1 -u root -p\"$$MYSQL_ROOT_PASSWORD\" --silent",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+    networks:
+      - byte_estoque_net
+
+volumes:
+  mysql_data:
+    name: byte_estoque_mysql_data
+
+networks:
+  byte_estoque_net:
+    name: byte_estoque_net
