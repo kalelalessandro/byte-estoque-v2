@@ -1,6 +1,8 @@
 BD Feito em MySQL, sujeito a mudanças.
 
 ```sql
+SET NAMES utf8mb4;
+
 CREATE DATABASE IF NOT EXISTS crm_estoque
     CHARACTER SET utf8mb4
     COLLATE utf8mb4_0900_ai_ci;
@@ -120,7 +122,7 @@ CREATE TABLE produtos (
 
 CREATE TABLE operacoes (
     id_operacao INT NOT NULL AUTO_INCREMENT,
-    id_parceiro INT NOT NULL,
+    id_parceiro INT NULL,
     id_usuario INT NOT NULL,
     tipo VARCHAR(30) NOT NULL,
     status VARCHAR(30) NOT NULL,
@@ -191,7 +193,8 @@ CREATE TABLE operacoes_caixa (
 
 CREATE TABLE titulos_financeiros (
     id_titulo INT NOT NULL AUTO_INCREMENT,
-    id_parceiro INT NOT NULL,
+    id_parceiro INT NULL,
+    id_empresa INT NOT NULL,
     id_operacao INT NULL,
     tipo VARCHAR(30) NOT NULL,
     valor DECIMAL(12,2) NOT NULL,
@@ -201,6 +204,9 @@ CREATE TABLE titulos_financeiros (
     PRIMARY KEY (id_titulo),
     CONSTRAINT chk_titulos_financeiros_valor CHECK (valor > 0),
     CONSTRAINT chk_titulos_financeiros_cancelado CHECK (cancelado IN (0, 1)),
+    CONSTRAINT fk_titulos_financeiros_empresa
+    FOREIGN KEY (id_empresa) REFERENCES empresas (id_empresa)
+    ON DELETE RESTRICT ON UPDATE RESTRICT,
     CONSTRAINT fk_titulos_financeiros_parceiro
         FOREIGN KEY (id_parceiro) REFERENCES parceiros (id_parceiro)
         ON DELETE RESTRICT ON UPDATE RESTRICT,
@@ -230,8 +236,19 @@ CREATE TABLE baixas_financeiras (
 Atualização em relação ao schema passado.:
 
 - Produtos agora usam `id_produto` como chave primária automática e `id_empresa` para identificar a empresa proprietária. `UNIQUE (id_empresa, sku)` permite o mesmo SKU em empresas diferentes e impede sua repetição dentro da mesma empresa. `operacao_itens` referencia `id_produto`, com chave primária composta `(id_operacao, id_produto)`.
+
 - A FK composta de produtos para categorias exige que a categoria pertença à mesma empresa do produto. Para isso, categorias possui a restrição auxiliar `UNIQUE (id_categoria, id_empresa)`.
 - Este arquivo contém o schema de criação atualizado, não uma migração de um banco existente. A identificação de produtos descrita no PDF original foi substituída pelas regras acima.
+
+- Em operacoes, id_parceiro agora aceita NULL, permitindo registrar compras e vendas sem a necessidade de cadastrar um cliente ou fornecedor previamente. id_usuario permanece obrigatório para identificar o usuário responsável pela operação.
+
+- Em titulos_financeiros, id_parceiro agora aceita NULL, permitindo registrar títulos financeiros sem vínculo obrigatório com um parceiro cadastrado. id_operacao também permanece opcional, possibilitando o registro manual de títulos sem uma operação de origem.
+
+- A tabela titulos_financeiros agora possui id_empresa INT NOT NULL, identificando diretamente a empresa proprietária de cada título financeiro, independentemente de sua associação com uma operação ou parceiro.
+
+- Foi adicionada a chave estrangeira fk_titulos_financeiros_empresa, que referencia empresas(id_empresa) e utiliza ON DELETE RESTRICT ON UPDATE RESTRICT, garantindo que todo título financeiro esteja associado a uma empresa existente.
+
+- No backend, a empresa responsável pelo título deve ser identificada a partir do usuário autenticado. Quando houver vínculo com uma operação ou parceiro, o sistema deve validar que os registros pertencem à mesma empresa.
 
 - Requer MySQL 8.0.16 ou superior para aplicar as restrições `CHECK`. Referência: [documentação oficial do MySQL](https://dev.mysql.com/doc/refman/8.0/en/create-table-check-constraints.html).
 - Os nomes `razão social`, `CNPJ` e `CEP` foram padronizados para `razao_social`, `cnpj` e `cep`. Foram adotados os limites de texto sugeridos no PDF, a unicidade recomendada para cargos, estoque inicial zero e data de criação da empresa preenchida automaticamente quando omitida.

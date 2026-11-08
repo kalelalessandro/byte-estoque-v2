@@ -1,8 +1,8 @@
 -- =============================================================================
 -- Byte Estoque - Schema do banco de dados (MySQL 8.0)
 -- =============================================================================
--- Fonte da verdade: crm-estoque/docs/schema_bd.md (documentacao v1.1).
--- Este arquivo eh a transcricao EXATA do bloco SQL daquele documento, mais os
+-- Fonte da verdade: crm-estoque/docs/schema_bd.md (documentacao v1.2).
+-- Este arquivo é a transcrição EXATA do bloco SQL daquele documento, mais os
 -- comandos de sessao necessarios para a execucao automatica pelo container.
 --
 -- Contem 13 tabelas: empresas, cargos, usuarios, parceiros, interacoes,
@@ -134,7 +134,7 @@ CREATE TABLE produtos (
 
 CREATE TABLE operacoes (
     id_operacao INT NOT NULL AUTO_INCREMENT,
-    id_parceiro INT NOT NULL,
+    id_parceiro INT NULL,
     id_usuario INT NOT NULL,
     tipo VARCHAR(30) NOT NULL,
     status VARCHAR(30) NOT NULL,
@@ -205,7 +205,8 @@ CREATE TABLE operacoes_caixa (
 
 CREATE TABLE titulos_financeiros (
     id_titulo INT NOT NULL AUTO_INCREMENT,
-    id_parceiro INT NOT NULL,
+    id_parceiro INT NULL,
+    id_empresa INT NOT NULL,
     id_operacao INT NULL,
     tipo VARCHAR(30) NOT NULL,
     valor DECIMAL(12,2) NOT NULL,
@@ -215,6 +216,9 @@ CREATE TABLE titulos_financeiros (
     PRIMARY KEY (id_titulo),
     CONSTRAINT chk_titulos_financeiros_valor CHECK (valor > 0),
     CONSTRAINT chk_titulos_financeiros_cancelado CHECK (cancelado IN (0, 1)),
+    CONSTRAINT fk_titulos_financeiros_empresa
+    FOREIGN KEY (id_empresa) REFERENCES empresas (id_empresa)
+    ON DELETE RESTRICT ON UPDATE RESTRICT,
     CONSTRAINT fk_titulos_financeiros_parceiro
         FOREIGN KEY (id_parceiro) REFERENCES parceiros (id_parceiro)
         ON DELETE RESTRICT ON UPDATE RESTRICT,
