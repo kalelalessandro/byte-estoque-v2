@@ -1,7 +1,7 @@
 # docker-compose do banco de dados do Byte Estoque (CRM + Estoque + Financeiro).
 #
 # Sobe um MySQL 8.0 isolado, com o schema do projeto aplicado automaticamente
-# na primeira inicializacao. Nada eh instalado no Windows: tudo fica no Docker.
+# na primeira inicializacao. Nada é instalado no Windows: tudo fica no Docker.
 #
 # Uso rapido (a partir da pasta database/):
 #   docker compose up -d
