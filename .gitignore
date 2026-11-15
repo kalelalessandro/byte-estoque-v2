@@ -1,2 +1,9 @@
 .env
 *.env.local
+
+# Python / backend
+__pycache__/
+*.py[cod]
+backend/.venv/
+backend/.tmp/
+backend/.uv-cache/

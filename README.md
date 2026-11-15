@@ -3,9 +3,9 @@ Byte Estoque é um software CRM que tem como principal objetivo, unir ambas func
 Planos:
 
     Banco de dados ✅
-    Login ⌛
-    Conectar Backend com BD ⌛
-    Criptografia
+    Login ✅
+    Conectar Backend com BD ✅
+    Criptografia ✅
     Caixa
     Clientes
     Compras
@@ -50,23 +50,6 @@ Deve aparecer `running` e `healthy`. Se ainda estiver `starting`, aguarde uns 30
 
 O banco já vem com as tabelas criadas e dados de exemplo.
 
-## Testando o banco
-
-Com o banco no ar, ainda dentro de `database/`:
-
-```powershell
-Get-Content .\verificacao\03_verificacao.sql -Raw | docker compose exec -T mysql mysql -u root -p crm_estoque
-```
-
-Digite a senha do root (a que você colocou no `.env`). No fim deve aparecer:
-
-    testes_ok   testes_com_falha   veredito
-    26          0                  TODAS AS RESTRICOES FUNCIONAM
-
-São 26 testes que conferem as regras do banco. Pode rodar quantas vezes quiser: o teste não altera os dados.
-
-Cada teste está explicado em `database/verificacao/Teste_SQL-001.md`.
-
 ## Conectando no banco
 
 | | |
@@ -85,3 +68,22 @@ docker compose start     # liga de novo
 docker compose down      # remove o container, mas os dados continuam salvos
 docker compose down -v   # apaga tudo, inclusive os dados
 ```
+
+## Rodando o backend (API de cadastro/login)
+
+Pré-requisito: banco no ar (passo anterior). Na pasta `backend/`:
+
+```powershell
+cd backend
+
+# Só na primeira vez: criar a venv e instalar as dependências
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+
+# Subir a API (http://127.0.0.1:5000)
+.\.venv\Scripts\python.exe -m src.app.main
+```
+
+Rotas disponíveis: `POST /api/auth/cadastro`, `POST /api/auth/login`,
+`POST /api/auth/logout`, `GET /api/auth/me` e `GET /api/health`.
+Detalhes de payload, códigos de retorno e exemplos: [backend/README.md](backend/README.md).
