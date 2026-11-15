@@ -7,6 +7,7 @@ protegida por sessão.
 
 from __future__ import annotations
 
+import re
 from functools import wraps
 from typing import Any, Callable
 
@@ -14,6 +15,11 @@ from flask import g, jsonify, request, session
 
 from ..db import get_db
 from ..db.models import Empresa, Usuario
+
+# Validação propositalmente simples (projeto de faculdade): algo@dominio.tld.
+# Usada no cadastro e no login para dar a mensagem de "e-mail inválido" do plano
+# de testes (LOG-N07) sem revelar detalhes internos.
+EMAIL_REGEX = re.compile(r"^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$")
 
 
 def resposta_ok(dados: Any = None, mensagem: str | None = None, status: int = 200):
@@ -71,6 +77,7 @@ def serializar_usuario(usuario: Usuario, incluir_empresa: bool = True) -> dict:
         "email": usuario.email,
         "telefone": usuario.telefone,
         "admin_sistema": bool(usuario.admin_sistema),
+        "id_empresa": usuario.id_empresa,
         "id_cargo": usuario.id_cargo,
         "cargo": usuario.cargo.cargo if usuario.cargo is not None else None,
     }

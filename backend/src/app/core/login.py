@@ -14,6 +14,7 @@ from werkzeug.security import check_password_hash
 from ..db import get_db
 from ..db.models import Usuario
 from .auth_utils import (
+    EMAIL_REGEX,
     ler_json,
     login_obrigatorio,
     resposta_erro,
@@ -36,6 +37,8 @@ def login():
     campos: dict = {}
     if not isinstance(email, str) or not email.strip():
         campos["email"] = "E-mail é obrigatório."
+    elif not EMAIL_REGEX.fullmatch(email.strip()):
+        campos["email"] = "E-mail inválido."
     if not isinstance(senha, str) or not senha:
         campos["senha"] = "Senha é obrigatória."
     if campos:

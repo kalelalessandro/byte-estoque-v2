@@ -3,6 +3,15 @@
 O cadastro cria, em uma única transação, a **empresa** e o **primeiro usuário**
 dela. O usuário recebe o cargo ``Administrador`` (criado na tabela ``cargos``
 caso ainda não exista). O schema do banco NÃO é alterado.
+
+Regras de normalização/validação seguem o plano de testes V1.2
+(``crm-estoque/docs/plano de testes.pdf``):
+
+- CNPJ aceita formato alfanumérico (12 caracteres ``[0-9A-Z]`` + 2 dígitos
+  verificadores numéricos), é normalizado para maiúsculas e sem pontuação e os
+  dígitos verificadores são conferidos (módulo 11, valor = ASCII - 48).
+- Telefones são texto livre de até 20 caracteres (preservam a máscara digitada).
+- E-mail e demais textos são aparados (trim); o e-mail vira minúsculo.
 """
 
 from __future__ import annotations
@@ -17,6 +26,7 @@ from werkzeug.security import generate_password_hash
 from ..db import get_db
 from ..db.models import Cargo, Empresa, Usuario
 from .auth_utils import (
+    EMAIL_REGEX,
     ler_json,
     resposta_erro,
     resposta_ok,
@@ -28,17 +38,67 @@ bp = Blueprint("signup", __name__)
 
 CARGO_PADRAO = "Administrador"
 
-# Validação propositalmente simples (projeto de faculdade): algo@dominio.tld.
-EMAIL_REGEX = re.compile(r"^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$")
-
 TAMANHO_MAXIMO_SENHA = 128
 TAMANHO_MINIMO_SENHA = 6
+TAMANHO_MAXIMO_TELEFONE = 20
+
+PESOS_CNPJ_DV1 = (5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2)
+PESOS_CNPJ_DV2 = (6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2)
+
+CARACTERES_MASCARA_CNPJ = re.compile(r"[.\-/\s]")
 
 
 def _somente_digitos(valor) -> str:
     if valor is None:
         return ""
     return re.sub(r"\D", "", str(valor))
+
+
+def _normalizar_cnpj(valor) -> str:
+    """Remove a máscara (. - / e espaços) e devolve em maiúsculas."""
+    if valor is None:
+        return ""
+    return CARACTERES_MASCARA_CNPJ.sub("", str(valor)).upper()
+
+
+def _calcular_digitos_verificadores_cnpj(base: str) -> str:
+    """Calcula os 2 DVs do CNPJ (módulo 11; valor do caractere = ASCII - 48)."""
+    valores = [ord(caractere) - 48 for caractere in base]
+
+    soma1 = sum(valor * peso for valor, peso in zip(valores, PESOS_CNPJ_DV1))
+    dv1 = 11 - soma1 % 11
+    if dv1 >= 10:
+        dv1 = 0
+
+    valores_com_dv1 = valores + [dv1]
+    soma2 = sum(valor * peso for valor, peso in zip(valores_com_dv1, PESOS_CNPJ_DV2))
+    dv2 = 11 - soma2 % 11
+    if dv2 >= 10:
+        dv2 = 0
+
+    return f"{dv1}{dv2}"
+
+
+def _validar_cnpj(valor) -> tuple[str, str | None]:
+    """Normaliza e valida o CNPJ. Retorna ``(cnpj, mensagem_de_erro)``."""
+    cnpj = _normalizar_cnpj(valor)
+
+    if len(cnpj) != 14:
+        return cnpj, "CNPJ deve conter exatamente 14 caracteres."
+
+    if not re.fullmatch(r"[0-9A-Z]{12}[0-9]{2}", cnpj):
+        return cnpj, (
+            "CNPJ inválido. Use 12 caracteres alfanuméricos e "
+            "2 dígitos verificadores numéricos."
+        )
+
+    if len(set(cnpj)) == 1:
+        return cnpj, "CNPJ inválido."
+
+    if _calcular_digitos_verificadores_cnpj(cnpj[:12]) != cnpj[12:]:
+        return cnpj, "CNPJ inválido (dígitos verificadores incorretos)."
+
+    return cnpj, None
 
 
 def _validar_texto(
@@ -66,20 +126,27 @@ def _validar_texto(
 
 
 def _validar_telefone(campo: str, valor, erros: dict, *, rotulo: str) -> str | None:
-    """Normaliza para apenas dígitos e aceita telefone fixo (10) ou celular (11)."""
-    if valor is None or (isinstance(valor, str) and not valor.strip()):
+    """Telefone opcional: texto de até 20 caracteres (máscara é preservada)."""
+    if valor is None:
         return None
+    if isinstance(valor, (int, float)):
+        valor = str(int(valor))
     if not isinstance(valor, str):
         erros[campo] = f"{rotulo} deve ser um texto."
         return None
-    digitos = _somente_digitos(valor)
-    if len(digitos) not in (10, 11):
-        erros[campo] = f"{rotulo} deve conter 10 ou 11 dígitos."
+    valor = valor.strip()
+    if not valor:
         return None
-    return digitos
+    if len(valor) > TAMANHO_MAXIMO_TELEFONE:
+        erros[campo] = (
+            f"{rotulo} deve ter no máximo {TAMANHO_MAXIMO_TELEFONE} caracteres."
+        )
+        return None
+    return valor
 
 
 def _validar_cep(campo: str, valor, erros: dict) -> str | None:
+    """CEP opcional: 8 dígitos após remover a máscara."""
     if valor is None or (isinstance(valor, str) and not valor.strip()):
         return None
     digitos = _somente_digitos(valor)
@@ -122,9 +189,9 @@ def _validar_cadastro(dados: dict) -> tuple[dict, dict]:
         obrigatorio=True,
     )
 
-    cnpj = _somente_digitos(empresa.get("cnpj"))
-    if len(cnpj) != 14:
-        erros["cnpj"] = "CNPJ deve conter exatamente 14 dígitos."
+    cnpj, erro_cnpj = _validar_cnpj(empresa.get("cnpj"))
+    if erro_cnpj:
+        erros["cnpj"] = erro_cnpj
 
     cep = _validar_cep("cep", empresa.get("cep"), erros)
     inscricao = _validar_texto(

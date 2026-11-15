@@ -1,9 +1,13 @@
 .env
 *.env.local
+AGENTS.md
 
 # Python / backend
 __pycache__/
 *.py[cod]
-backend/.venv/
+.venv/
 backend/.tmp/
 backend/.uv-cache/
+.pytest_cache/
+pytest-cache-files-*/
+scriptsDEMO
