@@ -11,7 +11,7 @@ from __future__ import annotations
 import pytest
 from sqlalchemy import bindparam, text
 
-from ..src.app.db import get_engine
+from src.app.db import get_engine
 from tests.helpers import CNPJ_VALIDO, CNPJ_VALIDO_2, criar_conta, entrar
 
 SENHA = "Senha#Teste1"

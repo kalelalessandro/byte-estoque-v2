@@ -21,6 +21,7 @@ from sqlalchemy.engine import URL
 from .core.login import bp as bp_login
 from .core.signup import bp as bp_signup
 from .db import get_engine, init_db
+from .modules.products import bp as bp_produtos
 
 # app/__init__.py -> app -> src -> backend -> raiz do projeto
 RAIZ_PROJETO = Path(__file__).resolve().parents[3]
@@ -110,6 +111,7 @@ def montar_url_banco() -> URL:
 def registrar_blueprints(app: Flask) -> None:
     app.register_blueprint(bp_login, url_prefix="/api/auth")
     app.register_blueprint(bp_signup, url_prefix="/api/auth")
+    app.register_blueprint(bp_produtos, url_prefix="/api/produtos")
 
 
 def registrar_rotas_basicas(app: Flask) -> None:
