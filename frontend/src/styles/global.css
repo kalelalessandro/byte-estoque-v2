@@ -1,0 +1,559 @@
+/* ==========================================================================
+   Byte Estoque — identidade visual: azul profundo + laranja.
+   Fundo em gradiente de "fundo do mar" (#233d4d no fim), detalhes em laranja
+   e textos claros para leitura confortável.
+   Folha canadense como marca d'água na parte inferior das telas.
+   ========================================================================== */
+
+:root {
+  --azul: #233d4d;
+  --azul-profundo: #08161f;
+  --azul-fundo: #0f2836;
+  --azul-fundo-2: #193848;
+  --laranja: #f97316;
+  --laranja-texto: #fb923c;
+  --laranja-escuro: #c2410c;
+  --laranja-claro: #ffedd5;
+  --texto: #eef3f6;
+  --texto-suave: #a9bfcb;
+  --texto-fraco: #7f99a8;
+  --folha: #9fb3bf;
+  --borda: rgba(159, 179, 191, 0.28);
+  --borda-forte: rgba(159, 179, 191, 0.45);
+  --painel: rgba(16, 40, 54, 0.72);
+  --painel-claro: rgba(255, 255, 255, 0.06);
+  --branco: #ffffff;
+  --fonte: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial,
+    sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--azul-profundo);
+  color: var(--texto);
+  font-family: var(--fonte);
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+a {
+  color: var(--laranja-texto);
+}
+
+/* --------------------------------------------------------------------------
+   Casca das telas — gradiente de fundo do mar
+   -------------------------------------------------------------------------- */
+
+.tela {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  overflow: hidden;
+  background:
+    /* raios de luz vindos da superfície */
+    linear-gradient(
+      112deg,
+      transparent 0 38%,
+      rgba(186, 230, 253, 0.05) 39% 40%,
+      transparent 41% 100%
+    ),
+    linear-gradient(
+      68deg,
+      transparent 0 54%,
+      rgba(186, 230, 253, 0.04) 55% 56%,
+      transparent 57% 100%
+    ),
+    /* claridade no topo e um respiro de laranja no canto */
+    radial-gradient(
+      1100px 560px at 78% -12%,
+      rgba(120, 190, 220, 0.18),
+      transparent 62%
+    ),
+    radial-gradient(
+      900px 520px at -10% 112%,
+      rgba(249, 115, 22, 0.1),
+      transparent 60%
+    ),
+    /* profundidade do mar */
+    linear-gradient(
+      180deg,
+      #08161f 0%,
+      #0f2836 32%,
+      #193848 62%,
+      #233d4d 100%
+    );
+}
+
+.tela__conteudo {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  width: min(1120px, 100%);
+  margin: 0 auto;
+  padding: 28px 24px 44px;
+}
+
+/* Folha canadense cinza ao fundo, no rodapé */
+.marca-dagua {
+  position: fixed;
+  bottom: -7vh;
+  left: 50%;
+  z-index: 0;
+  width: min(470px, 66vw);
+  color: var(--folha);
+  opacity: 0.14;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.tela-carregando {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  background: var(--azul-profundo);
+  color: var(--texto-suave);
+  letter-spacing: 0.08em;
+}
+
+/* --------------------------------------------------------------------------
+   Cabeçalho / marca
+   -------------------------------------------------------------------------- */
+
+.topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.topo--principal {
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--borda);
+}
+
+.topo__usuario {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: var(--texto-suave);
+  font-size: 0.9rem;
+  text-align: right;
+}
+
+.topo__usuario small {
+  display: block;
+  color: var(--texto-fraco);
+  font-size: 0.75rem;
+}
+
+.marca {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.marca__folha {
+  width: 34px;
+  height: 34px;
+  color: var(--folha);
+}
+
+.marca__texto {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+  letter-spacing: 0.14em;
+  font-size: 0.82rem;
+}
+
+.marca__texto strong {
+  color: var(--laranja-texto);
+}
+
+.marca__texto span {
+  margin-top: 2px;
+  color: var(--texto-fraco);
+  font-size: 0.68rem;
+}
+
+.marca--compacta .marca__folha {
+  width: 26px;
+  height: 26px;
+}
+
+/* --------------------------------------------------------------------------
+   Tela inicial
+   -------------------------------------------------------------------------- */
+
+.hero {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 22px;
+  max-width: 720px;
+  padding: 8vh 0 4vh;
+}
+
+.hero__selo {
+  display: inline-block;
+  padding: 6px 12px;
+  border: 1px solid rgba(249, 115, 22, 0.45);
+  border-radius: 999px;
+  background: rgba(249, 115, 22, 0.12);
+  color: var(--laranja-texto);
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  font-weight: 700;
+}
+
+.cartao__cabecalho .hero__selo {
+  margin-bottom: 12px;
+}
+
+.hero h1 {
+  margin: 0;
+  font-size: clamp(2.2rem, 5vw, 3.6rem);
+  line-height: 1.05;
+}
+
+.hero h1 em {
+  color: var(--laranja-texto);
+  font-style: normal;
+}
+
+.hero p {
+  max-width: 540px;
+  margin: 0;
+  color: var(--texto-suave);
+  font-size: 1.05rem;
+}
+
+.hero__acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.rodape {
+  margin-top: auto;
+  padding-top: 32px;
+  color: var(--texto-fraco);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+}
+
+/* --------------------------------------------------------------------------
+   Botões
+   -------------------------------------------------------------------------- */
+
+.botao {
+  padding: 13px 22px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 700;
+  transition: background 0.15s ease, border-color 0.15s ease,
+    color 0.15s ease, transform 0.15s ease;
+}
+
+.botao:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.botao:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.botao:focus-visible,
+.campo input:focus-visible {
+  outline: 2px solid var(--laranja-texto);
+  outline-offset: 2px;
+}
+
+.botao--primario {
+  background: var(--laranja);
+  color: #0b1a22;
+}
+
+.botao--primario:hover:not(:disabled) {
+  background: var(--laranja-escuro);
+  color: var(--branco);
+}
+
+.botao--secundario {
+  border-color: var(--borda-forte);
+  background: transparent;
+  color: var(--texto);
+}
+
+.botao--secundario:hover:not(:disabled) {
+  border-color: var(--laranja-texto);
+  color: var(--laranja-texto);
+}
+
+.botao--pequeno {
+  padding: 8px 14px;
+  font-size: 0.85rem;
+}
+
+.botao--texto {
+  padding: 6px 0;
+  border: none;
+  background: none;
+  color: var(--texto-suave);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.botao--texto:hover {
+  color: var(--laranja-texto);
+}
+
+/* --------------------------------------------------------------------------
+   Cartões / formulários (efeito "vidro do fundo do mar")
+   -------------------------------------------------------------------------- */
+
+.centro {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  padding: 5vh 0;
+}
+
+.cartao {
+  width: min(560px, 100%);
+  padding: clamp(24px, 4vw, 40px);
+  border: 1px solid var(--borda);
+  border-radius: 18px;
+  background: var(--painel);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(10px);
+}
+
+.cartao--largo {
+  width: min(840px, 100%);
+}
+
+.cartao__cabecalho h1 {
+  margin: 0 0 6px;
+  font-size: 1.6rem;
+}
+
+.cartao__cabecalho p {
+  margin: 0;
+  color: var(--texto-suave);
+  font-size: 0.95rem;
+}
+
+.nota-etapa {
+  margin-top: 10px !important;
+  font-size: 0.82rem !important;
+  color: var(--texto-fraco) !important;
+}
+
+.passos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.passos li {
+  padding: 6px 12px;
+  border: 1px solid var(--borda);
+  border-radius: 999px;
+  color: var(--texto-fraco);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.passos li.ativo {
+  border-color: var(--laranja);
+  background: var(--laranja);
+  color: #0b1a22;
+}
+
+.passos li.concluido {
+  border-color: rgba(251, 146, 60, 0.5);
+  color: var(--laranja-texto);
+}
+
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.grade {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.campo--largo {
+  grid-column: 1 / -1;
+}
+
+.campo label {
+  color: var(--texto-suave);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.campo input {
+  padding: 12px 13px;
+  border: 1px solid var(--borda);
+  border-radius: 9px;
+  background: rgba(8, 22, 31, 0.55);
+  color: var(--texto);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.campo input::placeholder {
+  color: var(--texto-fraco);
+}
+
+.campo input:focus {
+  border-color: var(--laranja);
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.22);
+}
+
+.campo small {
+  color: var(--texto-fraco);
+  font-size: 0.72rem;
+}
+
+.campo__erro {
+  color: var(--laranja-texto);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.alerta {
+  margin-top: 18px;
+  padding: 10px 14px;
+  border-left: 3px solid var(--laranja);
+  border-radius: 6px;
+  background: rgba(249, 115, 22, 0.12);
+  color: var(--laranja-claro);
+  font-size: 0.9rem;
+}
+
+.alerta--sucesso {
+  border-left-color: var(--texto-fraco);
+  background: rgba(159, 179, 191, 0.1);
+  color: var(--texto-suave);
+}
+
+.acoes-formulario {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.acoes-formulario .botao--primario {
+  flex: 1;
+  min-width: 180px;
+}
+
+.rodape-formulario {
+  margin-top: 22px;
+  color: var(--texto-suave);
+  font-size: 0.9rem;
+}
+
+/* --------------------------------------------------------------------------
+   Tela principal (WIP)
+   -------------------------------------------------------------------------- */
+
+.principal {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(22px, 5vh, 52px);
+  text-align: center;
+}
+
+.wip__etiqueta {
+  color: var(--texto-fraco);
+  font-size: 0.72rem;
+  letter-spacing: 0.3em;
+  font-weight: 700;
+}
+
+.wip h1 {
+  margin: 12px 0;
+  color: var(--laranja-texto);
+  font-size: clamp(1.8rem, 5vw, 3.2rem);
+  letter-spacing: 0.04em;
+}
+
+.wip p {
+  margin: 0;
+  color: var(--texto-suave);
+}
+
+/* --------------------------------------------------------------------------
+   Responsivo
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 640px) {
+  .grade {
+    grid-template-columns: 1fr;
+  }
+
+  .topo {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .topo__usuario {
+    flex-wrap: wrap;
+    text-align: left;
+  }
+
+  .acoes-formulario .botao--primario {
+    flex-basis: 100%;
+  }
+
+  .marca-dagua {
+    width: 88vw;
+    opacity: 0.1;
+  }
+}

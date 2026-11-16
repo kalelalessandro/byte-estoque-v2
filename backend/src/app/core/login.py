@@ -1,13 +1,82 @@
-import hashlib
+"""Rotas de login, logout e sessão do Byte Estoque.
 
-def login(email, hashed_password):
-    try:
-        l_email = input("Insira seu email: ")
-        l_password = input("Insira sua senha: ")
-        l_hashed_password = hashlib.sha256(l_password.encode()).hexdigest()
-        if l_email == email and l_hashed_password == hashed_password:
-            print("Login bem-sucedido!")
-        else:
-            print("Email ou senha incorretos. Tente novamente.")
-    except Exception as e:
-        print(f"Ocorreu um erro durante o login: {e}")
+Autenticação simples baseada em cookie de sessão do Flask (adequada para a
+apresentação do projeto). A senha é verificada com ``werkzeug.security``
+(hash scrypt gerado no cadastro; nunca guardamos senha em texto puro).
+"""
+
+from __future__ import annotations
+
+from flask import Blueprint, g, session
+from sqlalchemy import select
+from werkzeug.security import check_password_hash
+
+from ..db import get_db
+from ..db.models import Usuario
+from .auth_utils import (
+    EMAIL_REGEX,
+    ler_json,
+    login_obrigatorio,
+    resposta_erro,
+    resposta_ok,
+    serializar_usuario,
+)
+
+bp = Blueprint("login", __name__)
+
+
+@bp.post("/login")
+def login():
+    dados, erro = ler_json()
+    if erro is not None:
+        return erro
+
+    email = dados.get("email")
+    senha = dados.get("senha")
+
+    campos: dict = {}
+    if not isinstance(email, str) or not email.strip():
+        campos["email"] = "E-mail é obrigatório."
+    elif not EMAIL_REGEX.fullmatch(email.strip()):
+        campos["email"] = "E-mail inválido."
+    if not isinstance(senha, str) or not senha:
+        campos["senha"] = "Senha é obrigatória."
+    if campos:
+        return resposta_erro("Informe e-mail e senha.", 422, campos=campos)
+
+    email = email.strip().lower()
+    usuario = get_db().scalar(select(Usuario).where(Usuario.email == email))
+
+    # Mensagem genérica de propósito: não revela se o e-mail existe.
+    if usuario is None or not check_password_hash(usuario.hash_senha, senha):
+        return resposta_erro("E-mail ou senha incorretos.", 401)
+
+    # Evita fixação de sessão: limpa a sessão anterior antes de autenticar.
+    session.clear()
+    session["id_usuario"] = usuario.id_usuario
+    session.permanent = True
+
+    dados_usuario = serializar_usuario(usuario)
+
+    # Regra defensiva: usuário autenticado sem empresa precisa ser
+    # redirecionado ao cadastro de empresa antes de usar o sistema.
+    mensagem = "Login realizado com sucesso."
+    if dados_usuario["precisa_cadastrar_empresa"]:
+        mensagem = (
+            "Login realizado, mas é necessário cadastrar uma empresa para continuar."
+        )
+
+    return resposta_ok(dados_usuario, mensagem)
+
+
+@bp.post("/logout")
+def logout():
+    session.clear()
+    return resposta_ok(None, "Sessão encerrada.")
+
+
+@bp.get("/me")
+@login_obrigatorio
+def me():
+    """Retorna o usuário da sessão atual (rota protegida de exemplo)."""
+    return resposta_ok(serializar_usuario(g.usuario))

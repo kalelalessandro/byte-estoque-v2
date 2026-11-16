@@ -1,25 +1,23 @@
-from core.signup import *
-from core.login import *
+"""Ponto de entrada de desenvolvimento da API do Byte Estoque.
 
-print("Bem-vindo ao sistema ByteEstoque!")
-print("================================")
-print("1. Criar usuário")
-print("2. Fazer login")
-print("3. Criar parceiro")
-print("4. Sair")
+Como rodar (a partir da pasta ``backend/``):
 
-while True:
-    try:
-        choice = int(input("Escolha uma opção (1-4): "))
-        if choice == 1:
-            name, email, hashed_password, admin = create_user()
-        if choice == 2:
-            login(email, hashed_password)
-        if choice == 3:
-            create_partner()
-        if choice == 4:
-            print("Saindo do sistema. Até logo!")
-            exit()
-            break
-    except ValueError:
-        print("Opção inválida. Por favor, insira um número entre 1 e 4.")
+    .venv\\Scripts\\python.exe -m src.app.main
+
+A API sobe em http://127.0.0.1:5000 e o banco MySQL deve estar no ar
+(``docker compose up -d`` dentro de ``database/``).
+"""
+
+import os
+
+from . import create_app
+
+app = create_app()
+
+
+if __name__ == "__main__":
+    app.run(
+        host=os.environ.get("FLASK_RUN_HOST", "127.0.0.1"),
+        port=int(os.environ.get("FLASK_RUN_PORT", "5000")),
+        debug=app.config["DEBUG"],
+    )
