@@ -6,6 +6,8 @@ API no login/``me`` (incluindo a sinalização defensiva de redirecionamento).
 
 from __future__ import annotations
 
+import secrets
+
 import pytest
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
@@ -17,8 +19,31 @@ from src.app.core.auth_utils import (
 from src.app.db import get_engine
 from tests.helpers import cadastrar, criar_conta, entrar, me, usuario_valido
 
-CNPJ_ATOMICO = "55443322000105"
 EMAIL_ATOMICO = "fluxo.atomico@exemplo.com.br"
+
+PESOS_CNPJ_DV1 = (5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2)
+PESOS_CNPJ_DV2 = (6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2)
+
+
+def _gerar_cnpj_valido() -> str:
+    """Gera um CNPJ numérico válido aleatório.
+
+    CNPJ fixo aqui já causou falso negativo: um script de demonstração criou
+    uma empresa com o mesmo CNPJ e a limpeza dos testes (que preserva dados
+    ``@demo...``) não a apagava. Um CNPJ aleatório isola o teste de qualquer
+    dado pré-existente.
+    """
+    while True:
+        base = "".join(secrets.choice("0123456789") for _ in range(12))
+        if len(set(base)) == 1:  # CNPJ com todos os dígitos iguais é inválido
+            continue
+
+        valores = [ord(caractere) - 48 for caractere in base]
+        dv1 = 11 - sum(v * p for v, p in zip(valores, PESOS_CNPJ_DV1)) % 11
+        dv1 = 0 if dv1 >= 10 else dv1
+        dv2 = 11 - sum(v * p for v, p in zip(valores + [dv1], PESOS_CNPJ_DV2)) % 11
+        dv2 = 0 if dv2 >= 10 else dv2
+        return f"{base}{dv1}{dv2}"
 
 
 def test_login_retorna_contexto_da_empresa(client):
@@ -89,9 +114,11 @@ def test_cadastro_atomico_desfaz_empresa_quando_usuario_falha(
         "src.app.core.signup._obter_ou_criar_cargo", falhar_ao_obter_cargo
     )
 
+    cnpj = _gerar_cnpj_valido()
+
     resposta = cadastrar(
         client,
-        empresa={"razao_social": "Empresa Atômica Ltda", "cnpj": CNPJ_ATOMICO},
+        empresa={"razao_social": "Empresa Atômica Ltda", "cnpj": cnpj},
         usuario=usuario_valido(
             nome="Fluxo Atômico",
             email=EMAIL_ATOMICO,
@@ -105,7 +132,7 @@ def test_cadastro_atomico_desfaz_empresa_quando_usuario_falha(
         with get_engine().connect() as conexao:
             empresas = conexao.execute(
                 text("SELECT COUNT(*) FROM empresas WHERE cnpj = :cnpj"),
-                {"cnpj": CNPJ_ATOMICO},
+                {"cnpj": cnpj},
             ).scalar()
             usuarios = conexao.execute(
                 text("SELECT COUNT(*) FROM usuarios WHERE email = :email"),

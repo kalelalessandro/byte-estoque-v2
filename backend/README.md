@@ -64,6 +64,19 @@ o `uv.lock` deve ser versionado no Git.
 | POST | `/api/auth/login` | não | Autentica e cria a sessão |
 | POST | `/api/auth/logout` | não | Encerra a sessão |
 | GET | `/api/auth/me` | **sim** | Dados do usuário logado |
+| POST | `/api/categorias` | **sim** | Cria uma categoria |
+| GET | `/api/categorias` | **sim** | Lista as categorias da empresa |
+| PATCH | `/api/categorias/<id>` | **sim** | Renomeia uma categoria |
+| DELETE | `/api/categorias/<id>` | **sim** | Apaga categoria **sem produtos** (409 se houver produtos) |
+| POST | `/api/produtos` | **sim** | Cria um produto |
+| GET | `/api/produtos` | **sim** | Lista produtos (`busca`, `limit`, `offset`) |
+| GET | `/api/produtos/<id>` | **sim** | Detalhe de um produto |
+| PATCH | `/api/produtos/<id>` | **sim** | Altera SKU, categoria, nome, descrição, estoque e/ou preço |
+| DELETE | `/api/produtos/<id>` | **sim** | Apaga produto (409 se houver registros vinculados) |
+
+> Nas rotas de categorias e produtos a **empresa vem sempre da sessão**; o
+> `id_empresa` enviado no JSON é recusado. Categoria e SKU são únicos por
+> empresa, e a categoria do produto precisa ser da mesma empresa.
 
 ### `POST /api/auth/cadastro`
 
@@ -195,10 +208,15 @@ uv run pytest -v
 
 # Só os testes de banco (SQL direto)
 uv run pytest -m banco
+
+# Só categorias / só produtos
+uv run pytest tests/test_categorias.py
+uv run pytest tests/test_produtos.py
 ```
 
-Resultado esperado: **83 passed, 4 skipped** (os 4 skips são casos do plano que
-dependem de frontend ou de um estado impossível no schema atual; veja
+Resultado esperado: **145 passed, 4 skipped, 1 xfailed** (3 skips de UI/E2E da
+autenticação + PRD-N22 de confirmação visual; o xfail é o LOG-P08, impossível
+pelo schema `usuarios.id_empresa NOT NULL`; veja
 [tests/README.md](tests/README.md)).
 
 > A suíte limpa os dados que cria (e-mails `@exemplo.com.br`, CNPJs de teste e

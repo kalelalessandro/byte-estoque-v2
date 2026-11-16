@@ -21,6 +21,8 @@ from sqlalchemy.engine import URL
 from .core.login import bp as bp_login
 from .core.signup import bp as bp_signup
 from .db import get_engine, init_db
+from .modules.categories import bp as bp_categorias
+from .modules.products import bp as bp_produtos
 
 # app/__init__.py -> app -> src -> backend -> raiz do projeto
 RAIZ_PROJETO = Path(__file__).resolve().parents[3]
@@ -110,6 +112,8 @@ def montar_url_banco() -> URL:
 def registrar_blueprints(app: Flask) -> None:
     app.register_blueprint(bp_login, url_prefix="/api/auth")
     app.register_blueprint(bp_signup, url_prefix="/api/auth")
+    app.register_blueprint(bp_categorias, url_prefix="/api/categorias")
+    app.register_blueprint(bp_produtos, url_prefix="/api/produtos")
 
 
 def registrar_rotas_basicas(app: Flask) -> None:
@@ -119,13 +123,21 @@ def registrar_rotas_basicas(app: Flask) -> None:
             {
                 "ok": True,
                 "api": "Byte Estoque",
-                "descricao": "API de autenticação (login e cadastro).",
+                "descricao": "API de autenticação, categorias e produtos.",
                 "rotas": {
                     "health": "GET /api/health",
                     "cadastro": "POST /api/auth/cadastro",
                     "login": "POST /api/auth/login",
                     "logout": "POST /api/auth/logout",
                     "me": "GET /api/auth/me",
+                    "categorias": (
+                        "GET/POST /api/categorias, "
+                        "PATCH/DELETE /api/categorias/<id>"
+                    ),
+                    "produtos": (
+                        "GET/POST /api/produtos, "
+                        "GET/PATCH/DELETE /api/produtos/<id>"
+                    ),
                 },
             }
         )
@@ -170,6 +182,8 @@ def registrar_cors(app: Flask) -> None:
             resposta.headers["Access-Control-Allow-Origin"] = origem
             resposta.headers["Access-Control-Allow-Credentials"] = "true"
             resposta.headers["Access-Control-Allow-Headers"] = "Content-Type"
-            resposta.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+            resposta.headers["Access-Control-Allow-Methods"] = (
+                "GET, POST, PATCH, DELETE, OPTIONS"
+            )
             resposta.headers["Vary"] = "Origin"
         return resposta

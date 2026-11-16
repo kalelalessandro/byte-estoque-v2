@@ -1,4 +1,4 @@
-"""Modelos ORM das tabelas usadas pela autenticação.
+"""Modelos ORM das tabelas usadas pelo projeto.
 
 O schema do banco é imutável (ver AGENTS.md): este módulo apenas MAPEIA as
 tabelas existentes em ``database/init/01_schema.sql``. Nunca chamamos
@@ -8,8 +8,17 @@ tabelas existentes em ``database/init/01_schema.sql``. Nunca chamamos
 from __future__ import annotations
 
 from datetime import datetime
+from decimal import Decimal
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, func
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    func,
+)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -54,3 +63,24 @@ class Usuario(Base):
 
     empresa: Mapped[Empresa] = relationship(back_populates="usuarios", lazy="joined")
     cargo: Mapped[Cargo] = relationship(back_populates="usuarios", lazy="joined")
+
+
+class Categoria(Base):
+    __tablename__ = "categorias"
+
+    id_categoria: Mapped[int] = mapped_column(primary_key=True)
+    id_empresa: Mapped[int] = mapped_column(ForeignKey("empresas.id_empresa"))
+    nome: Mapped[str] = mapped_column(String(100))
+
+
+class Produto(Base):
+    __tablename__ = "produtos"
+
+    id_produto: Mapped[int] = mapped_column(primary_key=True)
+    id_empresa: Mapped[int] = mapped_column(ForeignKey("empresas.id_empresa"))
+    sku: Mapped[str] = mapped_column(String(64))
+    id_categoria: Mapped[int] = mapped_column(ForeignKey("categorias.id_categoria"))
+    nome: Mapped[str] = mapped_column(String(150))
+    descricao: Mapped[str | None] = mapped_column(String(500))
+    unidade_estoque: Mapped[int] = mapped_column(Integer, default=0)
+    preco: Mapped[Decimal] = mapped_column(Numeric(12, 2))
