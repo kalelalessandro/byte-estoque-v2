@@ -56,7 +56,17 @@ def login():
     session["id_usuario"] = usuario.id_usuario
     session.permanent = True
 
-    return resposta_ok(serializar_usuario(usuario), "Login realizado com sucesso.")
+    dados_usuario = serializar_usuario(usuario)
+
+    # Regra defensiva: usuário autenticado sem empresa precisa ser
+    # redirecionado ao cadastro de empresa antes de usar o sistema.
+    mensagem = "Login realizado com sucesso."
+    if dados_usuario["precisa_cadastrar_empresa"]:
+        mensagem = (
+            "Login realizado, mas é necessário cadastrar uma empresa para continuar."
+        )
+
+    return resposta_ok(dados_usuario, mensagem)
 
 
 @bp.post("/logout")

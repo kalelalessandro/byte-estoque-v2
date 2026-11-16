@@ -302,6 +302,8 @@ def cadastro():
         )
 
     try:
+        # Transação atômica: empresa, cargo (se necessário) e usuário são
+        # gravados juntos. Qualquer falha após o primeiro flush desfaz tudo.
         empresa = Empresa(
             razao_social=valores["razao_social"],
             cnpj=valores["cnpj"],
@@ -333,6 +335,9 @@ def cadastro():
             "Não foi possível concluir o cadastro: CNPJ ou e-mail já cadastrado.",
             409,
         )
+    except Exception:
+        db.rollback()
+        raise
 
     dados_resposta = {
         "empresa": serializar_empresa(empresa),

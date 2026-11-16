@@ -5,7 +5,9 @@ Suíte `pytest` que cobre o módulo de **autenticação** do projeto, baseada no
 de Usuário) e **EMP** (Cadastro de Empresa), mais os casos correlatos que tocam
 `empresas`, `cargos` e `usuarios` (BDD, FKN, INTG, COL e SEG).
 
-- **83 casos de teste** mapeados → **79 passando + 4 skips justificados**
+- **83 casos de teste do plano** mapeados → **83 passando + 4 skips justificados**
+- **4 testes extras** de fluxo/transação (`test_fluxo_empresa.py`): contexto de
+  empresa no login/`me`, sinal defensivo de redirecionamento e rollback atômico
 - Rodam contra o **MySQL real** do Docker (sem mock), usando o `test_client` do Flask
 - Limpeza automática dos dados criados, antes e depois de cada teste
 
@@ -44,6 +46,7 @@ uv run pytest -k "LOG-N"       # filtra por ID
 | BDD — Integridade do banco (auth) | BDD-P01, P02, P07, P08, N01, N05, N06 | `test_integridade_banco_auth.py` | 7 |
 | FKN — Campos obrigatórios (auth) | FKN-N01, FKN-N02 | `test_integridade_banco_auth.py` | 2 |
 | INTG — Integridade referencial (auth) | INTG-N01, INTG-N11 | `test_integridade_banco_auth.py` | 2 |
+| Fluxo/transação (extras, fora do plano) | contexto de empresa, sinal defensivo e rollback atômico | `test_fluxo_empresa.py` | 4 |
 
 Os IDs dos casos aparecem no nome de cada teste (ex.:
 `test_log_p02_cadastro_usuario_com_campos_validos`,
@@ -81,9 +84,12 @@ requisição, mantendo o resultado esperado de cada caso:
 | Caso | Motivo do skip |
 |---|---|
 | LOG-P08 | Exige "usuário sem empresa"; `usuarios.id_empresa` é NOT NULL no schema imutável. |
-| LOG-P11 | Exige a Tela Principal com menu de módulos (frontend ainda não existe). |
-| EMP-N23 | Exige página "Tela Principal" + usuário sem empresa (frontend/schema). |
-| EMP-N24 | Exige página "Cadastrar empresa" para usuário já logado (não existe no backend atual). |
+| LOG-P11 | Exige a Tela Principal (front-end React); é caso de UI/E2E, não de API. |
+| EMP-N23 | Exige Tela Principal (UI/E2E) + usuário sem empresa (impossível pelo schema). |
+| EMP-N24 | Exige o bloqueio da página "Cadastrar empresa" (UI/E2E); o pytest cobre a API. |
+
+> Esses 4 casos podem ser automatizados no futuro com um teste E2E do front
+> (Cypress/Playwright), como o plano original previa.
 
 ---
 

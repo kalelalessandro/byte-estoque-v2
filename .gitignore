@@ -1,6 +1,5 @@
 .env
 *.env.local
-AGENTS.md
 
 # Python / backend
 __pycache__/

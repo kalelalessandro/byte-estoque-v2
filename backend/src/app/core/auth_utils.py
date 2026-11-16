@@ -21,6 +21,9 @@ from ..db.models import Empresa, Usuario
 # de testes (LOG-N07) sem revelar detalhes internos.
 EMAIL_REGEX = re.compile(r"^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$")
 
+# Rota lógica do front-end para o cadastro de empresa (regra defensiva).
+ROTA_CADASTRO_EMPRESA = "/cadastro-empresa"
+
 
 def resposta_ok(dados: Any = None, mensagem: str | None = None, status: int = 200):
     """Resposta de sucesso padrão: ``{"ok": true, "mensagem": ..., "dados": ...}``."""
@@ -81,9 +84,25 @@ def serializar_usuario(usuario: Usuario, incluir_empresa: bool = True) -> dict:
         "id_cargo": usuario.id_cargo,
         "cargo": usuario.cargo.cargo if usuario.cargo is not None else None,
     }
-    if incluir_empresa and usuario.empresa is not None:
-        dados["empresa"] = serializar_empresa(usuario.empresa)
+    if incluir_empresa:
+        dados.update(serializar_contexto_empresa(usuario))
     return dados
+
+
+def serializar_contexto_empresa(usuario: Usuario) -> dict:
+    """Serializa o contexto multi-tenant (empresa) do usuário autenticado.
+
+    Regra defensiva: se um usuário logado não tiver empresa vinculada — algo
+    impossível pelo schema atual (``usuarios.id_empresa NOT NULL``), mas que
+    protegemos mesmo assim — a API sinaliza para o front-end redirecioná-lo ao
+    cadastro de empresa antes de continuar.
+    """
+    empresa = usuario.empresa
+    return {
+        "empresa": serializar_empresa(empresa) if empresa is not None else None,
+        "precisa_cadastrar_empresa": empresa is None,
+        "redirecionar_para": None if empresa is not None else ROTA_CADASTRO_EMPRESA,
+    }
 
 
 def login_obrigatorio(rota: Callable):

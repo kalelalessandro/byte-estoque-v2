@@ -193,11 +193,11 @@ def test_log_p10_login_email_em_maiusculas(client):
 
 
 @pytest.mark.skip(
-    reason="A Tela Principal com os módulos do fluxograma é responsabilidade do "
-    "frontend, que ainda não existe; a API não expõe essa tela."
+    reason="A Tela Principal é uma tela do front-end React; este caso é de "
+    "UI/E2E e não é automatizado pela suíte pytest (que cobre a API)."
 )
 def test_log_p11_tela_principal_exibe_modulos(client):
-    """LOG-P11: (depende do frontend/Tela Principal, fora do backend atual)."""
+    """LOG-P11: (caso de UI/E2E; não automatizado no pytest de API)."""
 
 
 # ---------------------------------------------------------------------------

@@ -364,19 +364,20 @@ def test_emp_n12_cnpj_duplicado_digitado_com_mascara(client):
 
 
 @pytest.mark.skip(
-    reason="Depende do fluxo de páginas 'Tela Principal'/'Cadastrar empresa' "
-    "(frontend) e de um usuário sem empresa, impossível com o schema atual."
+    reason="Caso de UI/E2E do front-end React (Tela Principal) e de um usuário "
+    "sem empresa, estado impossível pelo schema (usuarios.id_empresa NOT NULL). "
+    "A suíte pytest cobre apenas a API."
 )
 def test_emp_n23_usuario_sem_empresa_acessa_tela_principal(client):
-    """EMP-N23: (não aplicável ao backend atual)."""
+    """EMP-N23: (caso de UI/E2E; não automatizado no pytest de API)."""
 
 
 @pytest.mark.skip(
-    reason="Não existe página 'Cadastrar empresa' no backend atual: o endpoint "
-    "/api/auth/cadastro é público e cria empresa + usuário juntos."
+    reason="Caso de UI/E2E (bloqueio da página 'Cadastrar empresa'); o pytest "
+    "cobre a API, onde /api/auth/cadastro é público e cria empresa + usuário."
 )
 def test_emp_n24_usuario_com_empresa_acessa_cadastrar_empresa(client):
-    """EMP-N24: (não aplicável ao backend atual)."""
+    """EMP-N24: (caso de UI/E2E; não automatizado no pytest de API)."""
 
 
 def test_emp_n25_sql_injection_na_razao_social(client, app):

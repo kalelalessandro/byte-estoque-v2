@@ -130,9 +130,24 @@ Resposta **200** com `Set-Cookie` da sessão (vale 8 horas):
 {
   "ok": true,
   "mensagem": "Login realizado com sucesso.",
-  "dados": { "id_usuario": 1, "nome": "...", "email": "...", "cargo": "Administrador", "empresa": { "...": "..." } }
+  "dados": {
+    "id_usuario": 1,
+    "nome": "...",
+    "email": "...",
+    "cargo": "Administrador",
+    "empresa": { "id_empresa": 1, "razao_social": "...", "cnpj": "..." },
+    "precisa_cadastrar_empresa": false,
+    "redirecionar_para": null
+  }
 }
 ```
+
+Regra defensiva: se um usuário autenticado não tiver empresa vinculada — algo
+impossível pelo schema atual (`usuarios.id_empresa NOT NULL`), mas tratado — a
+resposta traz `"empresa": null`, `"precisa_cadastrar_empresa": true` e
+`"redirecionar_para": "/cadastro-empresa"`, e o front-end o envia ao cadastro
+de empresa antes de liberar o sistema. A rota `GET /api/auth/me` devolve o mesmo
+contexto.
 
 ### `GET /api/auth/me`
 
@@ -182,7 +197,7 @@ uv run pytest -v
 uv run pytest -m banco
 ```
 
-Resultado esperado: **79 passed, 4 skipped** (os 4 skips são casos do plano que
+Resultado esperado: **83 passed, 4 skipped** (os 4 skips são casos do plano que
 dependem de frontend ou de um estado impossível no schema atual; veja
 [tests/README.md](tests/README.md)).
 
@@ -244,6 +259,7 @@ backend/
     ├── helpers.py            # payloads e atalhos (cadastro/login/me)
     ├── test_login.py         # LOG-Pxx / LOG-Nxx + COL/SEG correlatos
     ├── test_cadastro_empresa.py  # EMP-Pxx / EMP-Nxx
+    ├── test_fluxo_empresa.py # transação atômica + contexto de empresa
     └── test_integridade_banco_auth.py  # BDD/FKN/INTG de autenticação
 ```
 
