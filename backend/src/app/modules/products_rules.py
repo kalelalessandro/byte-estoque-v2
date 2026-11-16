@@ -31,7 +31,7 @@ DUAS_CASAS = Decimal("0.01")
 # Campos que o cliente pode enviar em cada operação. Qualquer outro campo
 # (ex.: ``id_empresa``) é recusado: a empresa SEMPRE vem do usuário logado.
 CAMPOS_CRIACAO = {"sku", "id_categoria", "nome", "descricao", "unidade_estoque", "preco"}
-CAMPOS_EDICAO = {"nome", "descricao", "unidade_estoque", "preco"}
+CAMPOS_EDICAO = {"sku", "id_categoria", "nome", "descricao", "unidade_estoque", "preco"}
 
 
 # ---------------------------------------------------------------------------
@@ -209,6 +209,23 @@ def validar_edicao(dados: dict) -> tuple[dict, dict]:
 
     valores: dict = {}
 
+    if "sku" in dados:
+        sku = _validar_texto(
+            "sku", dados["sku"], erros,
+            rotulo="SKU", maximo=TAMANHO_MAXIMO_SKU, obrigatorio=True,
+        )
+        if sku is not None:
+            valores["sku"] = sku
+
+    if "id_categoria" in dados:
+        # Aqui só o formato; a rota confere existência e empresa.
+        id_categoria = _validar_inteiro(
+            "id_categoria", dados["id_categoria"], erros,
+            rotulo="Categoria", minimo=1, maximo=ESTOQUE_MAXIMO,
+        )
+        if id_categoria is not None:
+            valores["id_categoria"] = id_categoria
+
     if "nome" in dados:
         nome = _validar_texto(
             "nome", dados["nome"], erros,
@@ -243,7 +260,7 @@ def validar_edicao(dados: dict) -> tuple[dict, dict]:
     if not erros and not valores:
         erros["corpo"] = (
             "Informe ao menos um campo para alterar: "
-            "nome, descricao, unidade_estoque ou preco."
+            "sku, id_categoria, nome, descricao, unidade_estoque ou preco."
         )
 
     return valores, erros

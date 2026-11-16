@@ -5,7 +5,8 @@ Rotas (todas exigem login, igual ``GET /api/auth/me``):
     POST   /api/produtos        cria um produto
     GET    /api/produtos        lista os produtos da empresa (busca + paginação)
     GET    /api/produtos/<id>   detalhe de um produto
-    PATCH  /api/produtos/<id>   altera nome, descrição, preço e/ou estoque
+    PATCH  /api/produtos/<id>   altera SKU, categoria, nome, descrição, preço e/ou estoque
+    DELETE /api/produtos/<id>   apaga um produto (bloqueado se houver vínculos)
 
 Regras principais:
 
@@ -240,7 +241,7 @@ def obter_produto(id_produto: int):
 
 
 # ---------------------------------------------------------------------------
-# PATCH /api/produtos/<id>  -> alterar nome, descrição, preço e/ou estoque
+# PATCH /api/produtos/<id>  -> alterar dados do produto
 # ---------------------------------------------------------------------------
 
 
@@ -249,8 +250,10 @@ def obter_produto(id_produto: int):
 def alterar_produto(id_produto: int):
     """Edição PARCIAL: envie só o que mudou. Ex.: ``{"preco": 12.9}``.
 
-    Campos editáveis: ``nome``, ``descricao``, ``unidade_estoque`` e ``preco``.
-    ``unidade_estoque`` DEFINE o novo saldo (não soma/subtrai).
+    Campos editáveis: ``sku``, ``id_categoria``, ``nome``, ``descricao``,
+    ``unidade_estoque`` e ``preco``. ``unidade_estoque`` DEFINE o novo saldo
+    (não soma/subtrai). SKU e categoria continuam sujeitos às regras da empresa:
+    SKU único por empresa e categoria da própria empresa.
     """
     dados, erro = ler_json()
     if erro is not None:
@@ -263,12 +266,46 @@ def alterar_produto(id_produto: int):
         )
 
     db = get_db()
+    id_empresa = g.usuario.id_empresa
 
     # Trava a linha (FOR UPDATE) e já filtra pela empresa do usuário.
     produto = _buscar_produto_da_empresa(id_produto, travar=True)
     if produto is None:
         db.rollback()  # libera a transação aberta pelo SELECT
         return _produto_nao_encontrado()
+
+    # Categoria nova precisa existir e ser da MESMA empresa.
+    if "id_categoria" in valores:
+        categoria = db.scalar(
+            select(Categoria).where(
+                Categoria.id_categoria == valores["id_categoria"],
+                Categoria.id_empresa == id_empresa,
+            )
+        )
+        if categoria is None:
+            db.rollback()
+            return resposta_erro(
+                "Categoria não encontrada para esta empresa.",
+                422,
+                campos={"id_categoria": "Categoria inválida."},
+            )
+
+    # SKU novo precisa ser único na empresa (ignorando o próprio produto).
+    if "sku" in valores and valores["sku"] != produto.sku:
+        duplicado = db.scalar(
+            select(Produto.id_produto).where(
+                Produto.id_empresa == id_empresa,
+                Produto.sku == valores["sku"],
+                Produto.id_produto != produto.id_produto,
+            )
+        )
+        if duplicado is not None:
+            db.rollback()
+            return resposta_erro(
+                "Já existe um produto com este SKU nesta empresa.",
+                409,
+                campos={"sku": "SKU já cadastrado."},
+            )
 
     for campo, valor in valores.items():
         setattr(produto, campo, valor)
@@ -277,6 +314,43 @@ def alterar_produto(id_produto: int):
         db.commit()
     except IntegrityError:
         db.rollback()
-        return resposta_erro("Não foi possível salvar as alterações do produto.", 409)
+        return resposta_erro(
+            "Não foi possível salvar: SKU já cadastrado nesta empresa.",
+            409,
+            campos={"sku": "SKU já cadastrado."},
+        )
 
     return resposta_ok(serializar_produto(produto), "Produto atualizado com sucesso.")
+
+
+# ---------------------------------------------------------------------------
+# DELETE /api/produtos/<id>  -> apagar produto
+# ---------------------------------------------------------------------------
+
+
+@bp.delete("/<int:id_produto>")
+@login_obrigatorio
+def apagar_produto(id_produto: int):
+    """Apaga um produto da empresa do usuário.
+
+    Se o produto estiver em ``operacao_itens`` (ou outro vínculo com FK
+    ``RESTRICT``), o banco bloqueia e a API responde 409.
+    """
+    db = get_db()
+
+    produto = _buscar_produto_da_empresa(id_produto, travar=True)
+    if produto is None:
+        db.rollback()  # libera a transação aberta pelo SELECT
+        return _produto_nao_encontrado()
+
+    try:
+        db.delete(produto)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        return resposta_erro(
+            "Não é possível apagar o produto: existem registros vinculados a ele.",
+            409,
+        )
+
+    return resposta_ok({"id_produto": id_produto}, "Produto apagado com sucesso.")

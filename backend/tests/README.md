@@ -1,15 +1,19 @@
-# Testes de Autenticação — mapeamento do plano de testes V1.2
+# Testes da API — Autenticação, Categorias e Produtos
 
-Suíte `pytest` que cobre o módulo de **autenticação** do projeto, baseada no
-`crm-estoque/docs/plano de testes.pdf` (V1.2): módulos **LOG** (Login e Cadastro
-de Usuário) e **EMP** (Cadastro de Empresa), mais os casos correlatos que tocam
-`empresas`, `cargos` e `usuarios` (BDD, FKN, INTG, COL e SEG).
+Suíte `pytest` baseada no `crm-estoque/docs/plano de testes.pdf` (V1.3),
+cobrindo **autenticação** (LOG/EMP e casos correlatos de BDD, FKN, INTG, COL e
+SEG), **categorias (CAT)** e **produtos (PRD)**. Roda contra o **MySQL real** do
+Docker, sem mock, usando o `test_client` do Flask.
 
-- **83 casos de teste do plano** mapeados → **83 passando + 4 skips justificados**
-- **4 testes extras** de fluxo/transação (`test_fluxo_empresa.py`): contexto de
-  empresa no login/`me`, sinal defensivo de redirecionamento e rollback atômico
-- Rodam contra o **MySQL real** do Docker (sem mock), usando o `test_client` do Flask
+- **83 casos de autenticação** → 83 passando + 3 skips + 1 xfail (LOG-P08 impossível)
+- **18 casos de categorias (CAT)** → 18 passando: 14 originais (CAT-P01..P05,
+  CAT-N01..N09) + **4 incorporados ao plano** (CAT-P06, CAT-N10..N12, exclusão
+  segura de categorias)
+- **35 casos de produtos (PRD)** → 34 passando + 1 skip de UI (PRD-N22), mais
+  casos extras de segurança/isolamento entre empresas
+- **4 extras** de fluxo/transação (`test_fluxo_empresa.py`)
 - Limpeza automática dos dados criados, antes e depois de cada teste
+- Resultado atual da suíte: **145 passed, 4 skipped, 1 xfailed**
 
 ---
 
@@ -26,6 +30,8 @@ uv run pytest                  # suíte completa
 uv run pytest -v               # nome de cada caso
 uv run pytest tests/test_login.py            # só LOG
 uv run pytest tests/test_cadastro_empresa.py # só EMP
+uv run pytest tests/test_categorias.py       # só CAT
+uv run pytest tests/test_produtos.py         # só PRD
 uv run pytest -m banco         # só SQL direto
 uv run pytest -k "LOG-N"       # filtra por ID
 ```
@@ -39,18 +45,24 @@ uv run pytest -k "LOG-N"       # filtra por ID
 
 | Módulo do plano | Casos cobertos | Arquivo | Status |
 |---|---|---|---|
-| LOG — Login e Cadastro de Usuário | LOG-P01..P11, LOG-N01..N20 | `test_login.py` | 31 (2 skips) |
+| LOG — Login e Cadastro de Usuário | LOG-P01..P11, LOG-N01..N20 | `test_login.py` | 31 (1 skip + 1 xfail) |
 | EMP — Cadastro de Empresa | EMP-P01..P13, EMP-N01..N25 | `test_cadastro_empresa.py` | 38 (2 skips) |
 | COL — Texto/Collation (auth) | COL-N01 | `test_login.py` | 1 |
 | SEG — Segurança (auth) | SEG-N11, SEG-N12 | `test_login.py` | 2 |
 | BDD — Integridade do banco (auth) | BDD-P01, P02, P07, P08, N01, N05, N06 | `test_integridade_banco_auth.py` | 7 |
 | FKN — Campos obrigatórios (auth) | FKN-N01, FKN-N02 | `test_integridade_banco_auth.py` | 2 |
 | INTG — Integridade referencial (auth) | INTG-N01, INTG-N11 | `test_integridade_banco_auth.py` | 2 |
+| CAT — Categorias | CAT-P01..P06, CAT-N01..N12 | `test_categorias.py` | 18 (plano atualizado) |
+| PRD — Produtos | PRD-P01..P13, PRD-N01..N22 | `test_produtos.py` | 35 (34 + 1 skip) + extras |
 | Fluxo/transação (extras, fora do plano) | contexto de empresa, sinal defensivo e rollback atômico | `test_fluxo_empresa.py` | 4 |
 
 Os IDs dos casos aparecem no nome de cada teste (ex.:
 `test_log_p02_cadastro_usuario_com_campos_validos`,
 `test_emp_negativos_validacao[EMP-N06]`).
+
+> O plano de testes (PDF) está na **V1.3**, com os casos de exclusão de
+> categoria CAT-P06 e CAT-N10..N12 na página 47 e o **controle de versões na
+> página 48**.
 
 ---
 
@@ -78,17 +90,23 @@ requisição, mantendo o resultado esperado de cada caso:
 7. **SQL injection**: os casos são executados via API e verificam que nenhuma
    sessão é criada (login) e que o texto é gravado literalmente, com a tabela
    íntegra (razão social).
+8. **Categorias e produtos**: CAT e PRD foram testados no nível HTTP da API
+   (`/api/categorias` e `/api/produtos`), com a empresa vinda sempre da sessão.
+   O caso PRD-N22 é de confirmação visual (front-end) e ficou como skip; a
+   exclusão bloqueada por operação (PRD-N21) é testada criando a operação via
+   SQL e verificando o `409` do `DELETE`.
 
-## Skips justificados (4)
+## Skips justificados (4) + 1 XFAIL (impossível)
 
-| Caso | Motivo do skip |
+| Caso | Situação / motivo |
 |---|---|
-| LOG-P08 | Exige "usuário sem empresa"; `usuarios.id_empresa` é NOT NULL no schema imutável. |
-| LOG-P11 | Exige a Tela Principal (front-end React); é caso de UI/E2E, não de API. |
-| EMP-N23 | Exige Tela Principal (UI/E2E) + usuário sem empresa (impossível pelo schema). |
-| EMP-N24 | Exige o bloqueio da página "Cadastrar empresa" (UI/E2E); o pytest cobre a API. |
+| LOG-P08 | **XFAIL**: "IMPOSSÍVEL" — `usuarios.id_empresa` é NOT NULL, então não existe usuário sem empresa para logar. O teste verifica o schema e falha de propósito; se o schema mudar, vira XPASS e a suíte acusa. |
+| LOG-P11 | SKIP — exige a Tela Principal (front-end React); é caso de UI/E2E, não de API. |
+| EMP-N23 | SKIP — exige Tela Principal (UI/E2E) + usuário sem empresa (impossível pelo schema). |
+| EMP-N24 | SKIP — exige o bloqueio da página "Cadastrar empresa" (UI/E2E); o pytest cobre a API. |
+| PRD-N22 | SKIP — "Cancelar a confirmação ao apagar produto" é fluxo de confirmação do front-end; a API expõe apenas o `DELETE` direto. |
 
-> Esses 4 casos podem ser automatizados no futuro com um teste E2E do front
+> Os 4 skips podem ser automatizados no futuro com um teste E2E do front
 > (Cypress/Playwright), como o plano original previa.
 
 ---
@@ -98,6 +116,9 @@ requisição, mantendo o resultado esperado de cada caso:
 - Fixtures: `tests/conftest.py` (`app`, `client`, `banco_limpo` autouse).
 - E-mails terminam em `@exemplo.com.br` (exceto o e-mail de 254 caracteres do
   LOG-P05, que é registrado explicitamente); CNPJs vêm do próprio plano.
+- `test_produtos.py` e `test_categorias.py` têm fixtures próprias que apagam
+  operações, produtos e categorias antes de o `banco_limpo` remover as empresas
+  (por causa das FKs com `ON DELETE RESTRICT`).
 - Os dados criados via API são registrados em `tests/helpers.py`
   (`EMAILS_CRIADOS`/`CNPJS_CRIADOS`). O fixture `banco_limpo` remove:
   usuários registrados/padrão, empresas vinculadas, empresas `BD...` inseridas
@@ -106,8 +127,9 @@ requisição, mantendo o resultado esperado de cada caso:
 
 ## Observações
 
-- Casos do plano de outros módulos (produtos, parceiros, financeiro, etc.) não
-  foram implementados porque as rotas correspondentes ainda não existem.
+- Casos dos módulos **categorias (CAT)** e **produtos (PRD)** já estão
+  implementados e testados; os demais módulos do plano (parceiros, financeiro,
+  caixa, etc.) ainda não têm rotas na API.
 - Casos `CAR-N0x` (cargos) e `INTG-N02..N04` (exclusão de usuário com operações/
   interações/caixas) dependem de módulos que ainda não têm API; ficam para a
   próxima etapa.

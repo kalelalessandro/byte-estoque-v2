@@ -154,12 +154,33 @@ def test_log_p07_dois_usuarios_com_mesmo_telefone(client):
     assert dados["usuario"]["telefone"] == telefone
 
 
-@pytest.mark.skip(
-    reason="O schema exige usuarios.id_empresa NOT NULL; o estado 'usuário sem "
-    "empresa' do LOG-P08 é impossível e o cadastro cria empresa + usuário juntos."
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "IMPOSSÍVEL: o schema define usuarios.id_empresa como NOT NULL; "
+        "não existe usuário sem empresa para o LOG-P08 tentar logar."
+    ),
 )
-def test_log_p08_login_usuario_sem_empresa(client):
-    """LOG-P08: (não aplicável ao schema atual)."""
+def test_log_p08_login_usuario_sem_empresa(client, app):
+    """LOG-P08: impossível no schema atual — o teste comprova o motivo."""
+    with app.app_context():
+        with get_engine().connect() as conexao:
+            nullable = conexao.execute(
+                text(
+                    "SELECT IS_NULLABLE FROM information_schema.COLUMNS "
+                    "WHERE TABLE_SCHEMA = 'crm_estoque' "
+                    "AND TABLE_NAME = 'usuarios' "
+                    "AND COLUMN_NAME = 'id_empresa'"
+                )
+            ).scalar()
+
+    # Assert intencionalmente impossível de passar com o schema atual: por isso
+    # o teste fica XFAIL. Se id_empresa virar NULL, ele passa a XPASS e, como
+    # strict=True, a suíte falha avisando que o LOG-P08 precisa ser implementado.
+    assert nullable == "YES", (
+        "IMPOSSÍVEL: usuarios.id_empresa é NOT NULL; "
+        "não existe login de usuário sem empresa (LOG-P08)."
+    )
 
 
 def test_log_p09_login_usuario_com_empresa(client):
