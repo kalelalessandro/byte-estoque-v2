@@ -1,38 +1,100 @@
-/** Tela principal pós-login: status WIP. */
-import Marca from '../components/Marca'
+/** Casca do sistema autenticado: sidebar + páginas internas. */
+import { useEffect, useState } from 'react'
+import Icone from '../components/Icone'
+import Sidebar from '../components/Sidebar'
 import Tela from '../components/Tela'
+import Categorias from './Categorias'
+import Inicio from './Inicio'
+import Produtos from './Produtos'
+
+const TITULOS = {
+  inicio: 'Início',
+  produtos: 'Produtos',
+  categorias: 'Categorias',
+}
+
+function iniciais(nome = '') {
+  const partes = nome.trim().split(/\s+/).filter(Boolean)
+  return (partes[0]?.[0] || 'U') + (partes[1]?.[0] || '')
+}
 
 export default function TelaPrincipal({ usuario, aoSair }) {
+  const [pagina, setPagina] = useState('inicio')
+  const [menuAberto, setMenuAberto] = useState(false)
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [pagina])
+
+  function navegar(destino) {
+    setPagina(destino)
+    setMenuAberto(false)
+  }
+
   return (
-    <Tela className="tela-principal">
-      <header className="topo topo--principal">
-        <Marca compacta />
-        <div className="topo__usuario">
-          <span>
-            {usuario.nome}
-            <small>{usuario.empresa?.razao_social}</small>
-          </span>
+    <Tela className="tela-app">
+      <div className="app-layout">
+        <Sidebar
+          ativo={pagina}
+          aoNavegar={navegar}
+          aoSair={aoSair}
+          usuario={usuario}
+          aberto={menuAberto}
+          aoFechar={() => setMenuAberto(false)}
+        />
+
+        {menuAberto ? (
           <button
-            className="botao botao--secundario botao--pequeno"
+            className="sidebar-overlay"
             type="button"
-            onClick={aoSair}
-          >
-            Sair
-          </button>
-        </div>
-      </header>
+            aria-label="Fechar menu"
+            onClick={() => setMenuAberto(false)}
+          />
+        ) : null}
 
-      <main className="principal">
-        <div className="wip">
-          <span className="wip__etiqueta">STATUS DO SISTEMA</span>
-          <h1>(WORK IN PROGRESS)</h1>
-          <p>Estamos construindo os módulos de CRM, estoque e financeiro.</p>
-        </div>
-      </main>
+        <div className="app-conteudo">
+          <header className="app-topo">
+            <div className="app-topo__esquerda">
+              <button
+                className="app-menu-botao"
+                type="button"
+                onClick={() => setMenuAberto(true)}
+                aria-label="Abrir menu"
+              >
+                <Icone nome="menu" />
+              </button>
+              <div>
+                <span className="app-topo__rotulo">
+                  Byte Estoque / {TITULOS[pagina]}
+                </span>
+                <h1>{TITULOS[pagina]}</h1>
+              </div>
+            </div>
 
-      <footer className="rodape">
-        Byte Estoque © {new Date().getFullYear()} · modo demonstração
-      </footer>
+            <div className="app-topo__usuario">
+              <span className="app-topo__avatar" aria-hidden="true">
+                {iniciais(usuario?.nome).toUpperCase()}
+              </span>
+              <span className="app-topo__dados">
+                <strong>{usuario?.nome || 'Usuário'}</strong>
+                <small>{usuario?.empresa?.razao_social}</small>
+              </span>
+            </div>
+          </header>
+
+          <main className="app-pagina" id="conteudo-principal">
+            {pagina === 'inicio' ? (
+              <Inicio usuario={usuario} aoNavegar={navegar} />
+            ) : null}
+            {pagina === 'produtos' ? (
+              <Produtos aoNavegar={navegar} />
+            ) : null}
+            {pagina === 'categorias' ? (
+              <Categorias aoNavegar={navegar} />
+            ) : null}
+          </main>
+        </div>
+      </div>
     </Tela>
   )
 }

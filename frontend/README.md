@@ -1,7 +1,8 @@
 # Front-end — Byte Estoque (React + Vite)
 
-Interface inicial integrada à API Flask: tela de boas-vindas, login, cadastro
-em duas etapas (usuário → empresa) e tela principal em **WORK IN PROGRESS**.
+Interface integrada à API Flask: boas-vindas, login, cadastro em duas etapas
+(usuário → empresa) e aplicação autenticada com dashboard, **produtos** e
+**categorias**.
 
 ## Como rodar
 
@@ -34,7 +35,10 @@ npm run preview   # serve o build localmente
 - Fundo com **gradiente de fundo do mar** (azul escuro → `#233d4d`, com raios
   de luz suaves) para evitar cansaço visual.
 - Folha canadense cinza como logo e marca d'água na parte inferior das telas.
-- Tela principal com `(WORK IN PROGRESS)`.
+- Dashboard com cards de produtos, categorias, parceiros, dinheiro e valor em
+  estoque; os cards de parceiros/dinheiro estão marcados como **em breve** até
+  os módulos financeiro/parceiros existirem na API.
+- A seção inferior do dashboard mantém o `(WORK IN PROGRESS)`.
 
 ## Fluxo de telas
 
@@ -42,7 +46,13 @@ npm run preview   # serve o build localmente
 2. **Cadastro de usuário** (etapa 1) — dados da conta de acesso.
 3. **Cadastro de empresa** (etapa 2) — dados da empresa, enviados junto com o
    usuário em uma única transação atômica (`POST /api/auth/cadastro`).
-4. **Tela principal** — pós-login, com o status WIP e a caixa de estoque.
+4. **Início** — pós-login, sidebar com navegação e resumo do estoque.
+5. **Produtos** — listar/buscar, criar, editar e excluir produtos; o formulário
+   exige a seleção de uma categoria da empresa. A exclusão é bloqueada quando o
+   produto tem operações vinculadas.
+6. **Categorias** — criar, renomear e excluir categorias. A exclusão só é
+   liberada para categorias sem produtos; com produtos vinculados o botão fica
+   desabilitado e a API também responde `409`.
 
 Após o cadastro, o front faz login automaticamente. Se a API sinalizar
 `precisa_cadastrar_empresa: true` (regra defensiva), a tela de empresa

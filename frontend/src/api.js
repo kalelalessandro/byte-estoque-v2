@@ -56,6 +56,38 @@ export const api = {
     }),
   me: () => requisitar('/api/auth/me'),
   logout: () => requisitar('/api/auth/logout', { method: 'POST' }),
+
+  categorias: {
+    listar: () => requisitar('/api/categorias'),
+    criar: (nome) =>
+      requisitar('/api/categorias', { method: 'POST', corpo: { nome } }),
+    renomear: (idCategoria, nome) =>
+      requisitar(`/api/categorias/${idCategoria}`, {
+        method: 'PATCH',
+        corpo: { nome },
+      }),
+    excluir: (idCategoria) =>
+      requisitar(`/api/categorias/${idCategoria}`, { method: 'DELETE' }),
+  },
+
+  produtos: {
+    listar: ({ busca = '', limit = 50, offset = 0 } = {}) => {
+      const parametros = new URLSearchParams()
+      if (busca) parametros.set('busca', busca)
+      parametros.set('limit', String(limit))
+      parametros.set('offset', String(offset))
+      return requisitar(`/api/produtos?${parametros.toString()}`)
+    },
+    criar: (dados) =>
+      requisitar('/api/produtos', { method: 'POST', corpo: dados }),
+    editar: (idProduto, dados) =>
+      requisitar(`/api/produtos/${idProduto}`, {
+        method: 'PATCH',
+        corpo: dados,
+      }),
+    excluir: (idProduto) =>
+      requisitar(`/api/produtos/${idProduto}`, { method: 'DELETE' }),
+  },
 }
 
 /** Junta a mensagem geral com os erros por campo (quando existirem). */
