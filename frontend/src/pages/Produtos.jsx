@@ -1,5 +1,5 @@
 /** Catálogo de produtos: listar, criar, editar e excluir. */
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { api, mensagemDeErro } from '../api'
 import Aviso from '../components/Aviso'
 import Icone from '../components/Icone'
@@ -28,7 +28,6 @@ export default function Produtos({ aoNavegar }) {
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState('')
   const [aviso, setAviso] = useState('')
-  const [versao, setVersao] = useState(0)
   const [modalAberto, setModalAberto] = useState(false)
   const [editando, setEditando] = useState(null)
   const [formulario, setFormulario] = useState(FORMULARIO_VAZIO)
@@ -61,9 +60,7 @@ export default function Produtos({ aoNavegar }) {
       ativo = false
       clearTimeout(temporizador)
     }
-  }, [busca, versao])
-
-  const recarregar = useCallback(() => setVersao((atual) => atual + 1), [])
+  }, [busca])
 
   async function carregarCategorias() {
     if (categorias.length > 0) return categorias
@@ -119,6 +116,15 @@ export default function Produtos({ aoNavegar }) {
     setFormulario((atual) => ({ ...atual, [campo]: valor }))
   }
 
+  function combinaComBusca(produto) {
+    const termo = busca.trim().toLowerCase()
+    if (!termo) return true
+    return (
+      produto.nome.toLowerCase().includes(termo) ||
+      produto.sku.toLowerCase().includes(termo)
+    )
+  }
+
   async function salvar(evento) {
     evento.preventDefault()
     setErroFormulario('')
@@ -143,16 +149,52 @@ export default function Produtos({ aoNavegar }) {
 
     setSalvando(true)
     try {
+      // Atualização local com a própria resposta: evita o GET de recarga logo
+      // depois do POST/PATCH e deixa o salvamento perceptivelmente instantâneo.
+      const resposta = editando
+        ? await api.produtos.editar(editando.id_produto, dados)
+        : await api.produtos.criar(dados)
+      const salvo = resposta.dados
+      const combina = combinaComBusca(salvo)
+      const jaEstavaNaLista = produtos.some(
+        (produto) => produto.id_produto === salvo.id_produto,
+      )
+
+      setProdutos((atuais) => {
+        if (editando) {
+          if (!combina) {
+            return atuais.filter(
+              (produto) => produto.id_produto !== salvo.id_produto,
+            )
+          }
+          if (jaEstavaNaLista) {
+            return atuais.map((produto) =>
+              produto.id_produto === salvo.id_produto ? salvo : produto,
+            )
+          }
+          return [salvo, ...atuais]
+        }
+        return combina ? [salvo, ...atuais] : atuais
+      })
+
       if (editando) {
-        await api.produtos.editar(editando.id_produto, dados)
-        setAviso('Produto atualizado com sucesso.')
-      } else {
-        await api.produtos.criar(dados)
-        setAviso('Produto criado com sucesso.')
+        if (jaEstavaNaLista && !combina) {
+          setTotal((atual) => Math.max(0, atual - 1))
+        }
+        if (!jaEstavaNaLista && combina) {
+          setTotal((atual) => atual + 1)
+        }
+      } else if (combina) {
+        setTotal((atual) => atual + 1)
       }
+
+      setAviso(
+        editando
+          ? 'Produto atualizado com sucesso.'
+          : 'Produto criado com sucesso.',
+      )
       setModalAberto(false)
       setEditando(null)
-      recarregar()
     } catch (falha) {
       setErroFormulario(mensagemDeErro(falha))
     } finally {
@@ -169,8 +211,11 @@ export default function Produtos({ aoNavegar }) {
     setAviso('')
     try {
       await api.produtos.excluir(produto.id_produto)
+      setProdutos((atuais) =>
+        atuais.filter((item) => item.id_produto !== produto.id_produto),
+      )
+      setTotal((atual) => Math.max(0, atual - 1))
       setAviso('Produto excluído com sucesso.')
-      recarregar()
     } catch (falha) {
       setErro(mensagemDeErro(falha))
     }

@@ -47,6 +47,7 @@ def create_app(configuracao: dict | None = None) -> Flask:
         CORS_ORIGINS=os.environ.get(
             "CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
         ),
+        SENHA_HASH_METODO=os.environ.get("SENHA_HASH_METODO") or "scrypt",
         DEBUG=os.environ.get("FLASK_DEBUG", "1") == "1",
     )
     if configuracao:

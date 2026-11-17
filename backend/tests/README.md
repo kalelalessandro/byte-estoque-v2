@@ -14,8 +14,10 @@ Docker, sem mock, usando o `test_client` do Flask.
 - **4 extras** de fluxo/transação (`test_fluxo_empresa.py`)
 - **3 extras** de performance/dashboard: resumo agregado por empresa
   (`test_dashboard.py`)
+- **1 extra** de configuração: hash padrão do cadastro nunca fica `None`
+  (`test_config.py`)
 - Limpeza automática dos dados criados, antes e depois de cada teste
-- Resultado atual da suíte: **148 passed, 4 skipped, 1 xfailed**
+- Resultado atual da suíte: **149 passed, 4 skipped, 1 xfailed**
 
 ---
 
@@ -59,6 +61,7 @@ uv run pytest -k "LOG-N"       # filtra por ID
 | PRD — Produtos | PRD-P01..P13, PRD-N01..N22 | `test_produtos.py` | 35 (34 + 1 skip) + extras |
 | Fluxo/transação (extras, fora do plano) | contexto de empresa, sinal defensivo e rollback atômico | `test_fluxo_empresa.py` | 4 |
 | Dashboard (extras, performance) | `GET /api/dashboard/resumo`: contagens + valor em estoque no banco, isolamento por empresa, 401 | `test_dashboard.py` | 3 |
+| Configuração (extra, regressão) | hash de senha padrão do cadastro é válido (nunca `None`) | `test_config.py` | 1 |
 
 Os IDs dos casos aparecem no nome de cada teste (ex.:
 `test_log_p02_cadastro_usuario_com_campos_validos`,

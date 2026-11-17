@@ -215,7 +215,7 @@ uv run pytest tests/test_categorias.py
 uv run pytest tests/test_produtos.py
 ```
 
-Resultado esperado: **148 passed, 4 skipped, 1 xfailed** (3 skips de UI/E2E da
+Resultado esperado: **149 passed, 4 skipped, 1 xfailed** (3 skips de UI/E2E da
 autenticação + PRD-N22 de confirmação visual; o xfail é o LOG-P08, impossível
 pelo schema `usuarios.id_empresa NOT NULL`; veja
 [tests/README.md](tests/README.md)).

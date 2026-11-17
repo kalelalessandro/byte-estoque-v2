@@ -325,7 +325,7 @@ def cadastro():
             telefone=valores["telefone"],
             hash_senha=generate_password_hash(
                 valores["senha"],
-                method=current_app.config.get("SENHA_HASH_METODO"),
+                method=current_app.config.get("SENHA_HASH_METODO") or "scrypt",
             ),
             admin_sistema=False,
         )

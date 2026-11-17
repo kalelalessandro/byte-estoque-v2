@@ -53,10 +53,15 @@ export default function Categorias({ aoNavegar }) {
     setErro('')
     setAviso('')
     try {
-      await api.categorias.criar(nome)
+      const resposta = await api.categorias.criar(nome)
+      const nova = resposta.dados
+      setCategorias((atuais) =>
+        [...atuais, nova].sort((a, b) =>
+          a.nome.localeCompare(b.nome, 'pt-BR'),
+        ),
+      )
       setNomeNovo('')
       setAviso('Categoria criada com sucesso.')
-      carregar()
     } catch (falha) {
       setErro(mensagemDeErro(falha))
     } finally {
@@ -89,12 +94,24 @@ export default function Categorias({ aoNavegar }) {
     setSalvando(true)
     setErroModal('')
     try {
-      await api.categorias.renomear(renomeando.id_categoria, nome)
+      const resposta = await api.categorias.renomear(
+        renomeando.id_categoria,
+        nome,
+      )
+      const atualizada = resposta.dados
+      setCategorias((atuais) =>
+        atuais
+          .map((categoria) =>
+            categoria.id_categoria === atualizada.id_categoria
+              ? atualizada
+              : categoria,
+          )
+          .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')),
+      )
       setRenomeando(null)
       setNovoNome('')
       setErroModal('')
       setAviso('Categoria renomeada com sucesso.')
-      carregar()
     } catch (falha) {
       setErroModal(mensagemDeErro(falha))
     } finally {
@@ -117,8 +134,10 @@ export default function Categorias({ aoNavegar }) {
     setAviso('')
     try {
       await api.categorias.excluir(categoria.id_categoria)
+      setCategorias((atuais) =>
+        atuais.filter((item) => item.id_categoria !== categoria.id_categoria),
+      )
       setAviso('Categoria excluída com sucesso.')
-      carregar()
     } catch (falha) {
       setErro(mensagemDeErro(falha))
     }
