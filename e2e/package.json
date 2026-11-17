@@ -1,0 +1,19 @@
+{
+  "name": "byte-estoque-e2e",
+  "version": "1.2.0",
+  "private": true,
+  "description": "Testes E2E (Cypress) do Byte Estoque, baseados no Plano de Testes V1.2.",
+  "scripts": {
+    "open": "cypress open",
+    "test": "cypress run",
+    "test:auth": "cypress run --spec \"cypress/e2e/auth/**\"",
+    "test:catalogo": "cypress run --spec \"cypress/e2e/catalogo/**\"",
+    "test:dashboard": "cypress run --spec \"cypress/e2e/dashboard/**\"",
+    "test:seguranca": "cypress run --spec \"cypress/e2e/seguranca/**\"",
+    "test:jornada": "cypress run --spec \"cypress/e2e/jornada/**\""
+  },
+  "devDependencies": {
+    "cypress": "^13.17.0",
+    "mysql2": "^3.11.0"
+  }
+}
