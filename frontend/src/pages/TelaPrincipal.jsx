@@ -1,5 +1,6 @@
 /** Casca do sistema autenticado: sidebar + páginas internas. */
 import { useEffect, useState } from 'react'
+import { api } from '../api'
 import Icone from '../components/Icone'
 import Sidebar from '../components/Sidebar'
 import Tela from '../components/Tela'
@@ -21,6 +22,19 @@ function iniciais(nome = '') {
 export default function TelaPrincipal({ usuario, aoSair }) {
   const [pagina, setPagina] = useState('inicio')
   const [menuAberto, setMenuAberto] = useState(false)
+
+  useEffect(() => {
+    // Pré-aquece o cache das abas assim que o shell monta. Assim, quando o
+    // usuário clicar em Produtos/Categorias, os dados normalmente já chegaram.
+    const temporizador = setTimeout(() => {
+      Promise.allSettled([
+        api.produtos.listar({ limit: 200 }),
+        api.categorias.listar(),
+      ])
+    }, 150)
+
+    return () => clearTimeout(temporizador)
+  }, [])
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' })

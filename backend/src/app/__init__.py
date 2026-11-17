@@ -22,6 +22,7 @@ from .core.login import bp as bp_login
 from .core.signup import bp as bp_signup
 from .db import get_engine, init_db
 from .modules.categories import bp as bp_categorias
+from .modules.dashboard import bp as bp_dashboard
 from .modules.products import bp as bp_produtos
 
 # app/__init__.py -> app -> src -> backend -> raiz do projeto
@@ -113,6 +114,7 @@ def registrar_blueprints(app: Flask) -> None:
     app.register_blueprint(bp_login, url_prefix="/api/auth")
     app.register_blueprint(bp_signup, url_prefix="/api/auth")
     app.register_blueprint(bp_categorias, url_prefix="/api/categorias")
+    app.register_blueprint(bp_dashboard, url_prefix="/api/dashboard")
     app.register_blueprint(bp_produtos, url_prefix="/api/produtos")
 
 
@@ -123,13 +125,14 @@ def registrar_rotas_basicas(app: Flask) -> None:
             {
                 "ok": True,
                 "api": "Byte Estoque",
-                "descricao": "API de autenticação, categorias e produtos.",
+                "descricao": "API de autenticação, dashboard, categorias e produtos.",
                 "rotas": {
                     "health": "GET /api/health",
                     "cadastro": "POST /api/auth/cadastro",
                     "login": "POST /api/auth/login",
                     "logout": "POST /api/auth/logout",
                     "me": "GET /api/auth/me",
+                    "dashboard": "GET /api/dashboard/resumo",
                     "categorias": (
                         "GET/POST /api/categorias, "
                         "PATCH/DELETE /api/categorias/<id>"

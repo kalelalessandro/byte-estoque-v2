@@ -134,7 +134,14 @@ def test_cat_p05_produto_continua_vinculado_apos_renomear(client):
 
     detalhe = client.get(f"/api/produtos/{produto['id_produto']}").get_json()["dados"]
     assert detalhe["id_categoria"] == categoria["id_categoria"]
-    assert "Bebidas e Sucos" in [categoria["nome"] for categoria in _listar(client)]
+    assert detalhe["categoria_nome"] == "Bebidas e Sucos"
+
+    renomeada = next(
+        item
+        for item in _listar(client)
+        if item["id_categoria"] == categoria["id_categoria"]
+    )
+    assert renomeada["produtos_count"] == 1
 
 
 # ---------------------------------------------------------------------------

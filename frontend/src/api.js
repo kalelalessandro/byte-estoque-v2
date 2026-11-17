@@ -8,6 +8,14 @@
 
 const BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
 
+// O React em modo estrito monta componentes duas vezes em desenvolvimento.
+// Este cache evita refazer a mesma busca ao trocar de tela; qualquer escrita
+// (POST/PATCH/DELETE) invalida o cache para dados nunca ficarem desatualizados.
+// O TTL é alto de propósito: o shell pré-carrega produtos/categorias após o
+// login e as abas reaproveitam esses dados.
+const CACHE_TTL_MS = 5 * 60 * 1000
+const cacheGet = new Map()
+
 export class ApiError extends Error {
   constructor(status, corpo) {
     super(corpo?.erro || 'Não foi possível concluir a operação.')
@@ -17,7 +25,7 @@ export class ApiError extends Error {
   }
 }
 
-async function requisitar(caminho, { method = 'GET', corpo } = {}) {
+async function executar(caminho, { method = 'GET', corpo } = {}) {
   let resposta
   try {
     resposta = await fetch(`${BASE}${caminho}`, {
@@ -45,6 +53,30 @@ async function requisitar(caminho, { method = 'GET', corpo } = {}) {
   return dados
 }
 
+function requisitar(caminho, opcoes = {}) {
+  const metodo = (opcoes.method || 'GET').toUpperCase()
+
+  if (metodo !== 'GET') {
+    cacheGet.clear()
+    return executar(caminho, { ...opcoes, method: metodo })
+  }
+
+  const agora = Date.now()
+  const emCache = cacheGet.get(caminho)
+  if (emCache && emCache.expiraEm > agora) {
+    return emCache.promessa
+  }
+
+  const promessa = executar(caminho, { ...opcoes, method: metodo }).catch(
+    (erro) => {
+      cacheGet.delete(caminho)
+      throw erro
+    },
+  )
+  cacheGet.set(caminho, { expiraEm: agora + CACHE_TTL_MS, promessa })
+  return promessa
+}
+
 export const api = {
   saúde: () => requisitar('/api/health'),
   login: (email, senha) =>
@@ -56,6 +88,7 @@ export const api = {
     }),
   me: () => requisitar('/api/auth/me'),
   logout: () => requisitar('/api/auth/logout', { method: 'POST' }),
+  dashboard: () => requisitar('/api/dashboard/resumo'),
 
   categorias: {
     listar: () => requisitar('/api/categorias'),

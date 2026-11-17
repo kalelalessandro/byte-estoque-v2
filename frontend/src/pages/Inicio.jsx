@@ -9,35 +9,32 @@ const MOEDA = new Intl.NumberFormat('pt-BR', {
   currency: 'BRL',
 })
 
+const RESUMO_VAZIO = {
+  produtos: 0,
+  categorias: 0,
+  valor_estoque: '0.00',
+}
+
 export default function Inicio({ usuario, aoNavegar }) {
-  const [resumo, setResumo] = useState({
+  const [estado, setEstado] = useState({
     carregando: true,
     erro: '',
-    produtos: [],
-    totalProdutos: 0,
-    categorias: [],
+    dados: RESUMO_VAZIO,
   })
 
   useEffect(() => {
     let ativo = true
 
-    Promise.all([
-      api.produtos.listar({ limit: 200 }),
-      api.categorias.listar(),
-    ])
-      .then(([produtos, categorias]) => {
+    // Uma única chamada agregada: nada de baixar todos os produtos/categorias.
+    api
+      .dashboard()
+      .then((resposta) => {
         if (!ativo) return
-        setResumo({
-          carregando: false,
-          erro: '',
-          produtos: produtos.dados.produtos,
-          totalProdutos: produtos.dados.total,
-          categorias: categorias.dados.categorias,
-        })
+        setEstado({ carregando: false, erro: '', dados: resposta.dados })
       })
       .catch((falha) => {
         if (!ativo) return
-        setResumo((anterior) => ({
+        setEstado((anterior) => ({
           ...anterior,
           carregando: false,
           erro: mensagemDeErro(falha),
@@ -49,17 +46,11 @@ export default function Inicio({ usuario, aoNavegar }) {
     }
   }, [])
 
-  const valorEmEstoque = resumo.produtos.reduce(
-    (soma, produto) =>
-      soma + Number(produto.preco || 0) * Number(produto.unidade_estoque || 0),
-    0,
-  )
-
   const cartoes = [
     {
       id: 'produtos',
       rotulo: 'Produtos',
-      valor: resumo.totalProdutos,
+      valor: estado.dados.produtos,
       detalhe: 'itens cadastrados',
       icone: 'produtos',
       acao: () => aoNavegar('produtos'),
@@ -67,7 +58,7 @@ export default function Inicio({ usuario, aoNavegar }) {
     {
       id: 'categorias',
       rotulo: 'Categorias',
-      valor: resumo.categorias.length,
+      valor: estado.dados.categorias,
       detalhe: 'categorias ativas',
       icone: 'categorias',
       acao: () => aoNavegar('categorias'),
@@ -91,7 +82,7 @@ export default function Inicio({ usuario, aoNavegar }) {
     {
       id: 'estoque',
       rotulo: 'Valor em estoque',
-      valor: MOEDA.format(valorEmEstoque),
+      valor: MOEDA.format(Number(estado.dados.valor_estoque || 0)),
       detalhe: 'preço × quantidade',
       icone: 'grafico',
     },
@@ -117,7 +108,7 @@ export default function Inicio({ usuario, aoNavegar }) {
         </button>
       </section>
 
-      {resumo.erro ? <Aviso>{resumo.erro}</Aviso> : null}
+      {estado.erro ? <Aviso>{estado.erro}</Aviso> : null}
 
       <section className="dashboard__grade" aria-label="Resumo do estoque">
         {cartoes.map((cartao) => {
@@ -128,7 +119,7 @@ export default function Inicio({ usuario, aoNavegar }) {
               </span>
               <span className="metrica__rotulo">{cartao.rotulo}</span>
               <strong className="metrica__valor">
-                {resumo.carregando ? '…' : cartao.valor}
+                {estado.carregando ? '…' : cartao.valor}
               </strong>
               <span className="metrica__detalhe">
                 {cartao.detalhe}

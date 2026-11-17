@@ -23,7 +23,7 @@ Regras:
 from __future__ import annotations
 
 from flask import Blueprint, g
-from sqlalchemy import select
+from sqlalchemy import and_, func, select
 from sqlalchemy.exc import IntegrityError
 
 from ..core.auth_utils import ler_json, login_obrigatorio, resposta_erro, resposta_ok
@@ -34,12 +34,28 @@ from .categories_rules import validar_criacao, validar_edicao
 bp = Blueprint("categories", __name__)
 
 
-def serializar_categoria(categoria: Categoria) -> dict:
+def serializar_categoria(categoria: Categoria, produtos_count: int = 0) -> dict:
     return {
         "id_categoria": categoria.id_categoria,
         "id_empresa": categoria.id_empresa,
         "nome": categoria.nome,
+        "produtos_count": produtos_count,
     }
+
+
+def _quantidade_produtos(id_categoria: int, id_empresa: int) -> int:
+    """Quantidade de produtos vinculados à categoria (para a tela de categorias)."""
+    return (
+        get_db().scalar(
+            select(func.count())
+            .select_from(Produto)
+            .where(
+                Produto.id_categoria == id_categoria,
+                Produto.id_empresa == id_empresa,
+            )
+        )
+        or 0
+    )
 
 
 def _buscar_categoria_da_empresa(
@@ -103,24 +119,40 @@ def criar_categoria():
         )
 
     return resposta_ok(
-        serializar_categoria(categoria), "Categoria criada com sucesso.", 201
+        serializar_categoria(categoria, 0),
+        "Categoria criada com sucesso.",
+        201,
     )
 
 
 @bp.get("")
 @login_obrigatorio
 def listar_categorias():
-    """Lista as categorias da empresa do usuário (para seleção em produtos)."""
-    categorias = get_db().scalars(
-        select(Categoria)
+    """Lista as categorias da empresa com a quantidade de produtos de cada uma."""
+    linhas = get_db().execute(
+        select(
+            Categoria,
+            func.count(Produto.id_produto).label("produtos_count"),
+        )
+        .outerjoin(
+            Produto,
+            and_(
+                Produto.id_categoria == Categoria.id_categoria,
+                Produto.id_empresa == Categoria.id_empresa,
+            ),
+        )
         .where(Categoria.id_empresa == g.usuario.id_empresa)
+        .group_by(Categoria.id_categoria, Categoria.id_empresa, Categoria.nome)
         .order_by(Categoria.nome, Categoria.id_categoria)
     ).all()
 
     return resposta_ok(
         {
-            "categorias": [serializar_categoria(c) for c in categorias],
-            "total": len(categorias),
+            "categorias": [
+                serializar_categoria(categoria, quantidade)
+                for categoria, quantidade in linhas
+            ],
+            "total": len(linhas),
         }
     )
 
@@ -169,7 +201,11 @@ def renomear_categoria(id_categoria: int):
         )
 
     return resposta_ok(
-        serializar_categoria(categoria), "Categoria renomeada com sucesso."
+        serializar_categoria(
+            categoria,
+            _quantidade_produtos(categoria.id_categoria, categoria.id_empresa),
+        ),
+        "Categoria renomeada com sucesso.",
     )
 
 

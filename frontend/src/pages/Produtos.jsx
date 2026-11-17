@@ -1,5 +1,5 @@
 /** Catálogo de produtos: listar, criar, editar e excluir. */
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { api, mensagemDeErro } from '../api'
 import Aviso from '../components/Aviso'
 import Icone from '../components/Icone'
@@ -22,6 +22,7 @@ const FORMULARIO_VAZIO = {
 export default function Produtos({ aoNavegar }) {
   const [produtos, setProdutos] = useState([])
   const [categorias, setCategorias] = useState([])
+  const [carregandoCategorias, setCarregandoCategorias] = useState(false)
   const [total, setTotal] = useState(0)
   const [busca, setBusca] = useState('')
   const [carregando, setCarregando] = useState(true)
@@ -36,22 +37,9 @@ export default function Produtos({ aoNavegar }) {
 
   useEffect(() => {
     let ativo = true
-    api.categorias
-      .listar()
-      .then((resposta) => {
-        if (ativo) setCategorias(resposta.dados.categorias)
-      })
-      .catch((falha) => {
-        if (ativo) setErro(mensagemDeErro(falha))
-      })
-    return () => {
-      ativo = false
-    }
-  }, [])
-
-  useEffect(() => {
-    let ativo = true
     setCarregando(true)
+    // Busca imediata ao abrir a tela; debounce só quando o usuário digita.
+    const atraso = busca.trim() ? 250 : 0
     const temporizador = setTimeout(() => {
       api.produtos
         .listar({ busca: busca.trim(), limit: 200 })
@@ -67,7 +55,7 @@ export default function Produtos({ aoNavegar }) {
         .finally(() => {
           if (ativo) setCarregando(false)
         })
-    }, 250)
+    }, atraso)
 
     return () => {
       ativo = false
@@ -75,15 +63,22 @@ export default function Produtos({ aoNavegar }) {
     }
   }, [busca, versao])
 
-  const categoriasPorId = useMemo(
-    () =>
-      new Map(
-        categorias.map((categoria) => [categoria.id_categoria, categoria]),
-      ),
-    [categorias],
-  )
-
   const recarregar = useCallback(() => setVersao((atual) => atual + 1), [])
+
+  async function carregarCategorias() {
+    if (categorias.length > 0) return categorias
+    setCarregandoCategorias(true)
+    try {
+      const resposta = await api.categorias.listar()
+      setCategorias(resposta.dados.categorias)
+      return resposta.dados.categorias
+    } catch (falha) {
+      setErro(mensagemDeErro(falha))
+      return []
+    } finally {
+      setCarregandoCategorias(false)
+    }
+  }
 
   function abrirNovo() {
     setEditando(null)
@@ -94,6 +89,7 @@ export default function Produtos({ aoNavegar }) {
     setErroFormulario('')
     setAviso('')
     setModalAberto(true)
+    carregarCategorias()
   }
 
   function abrirEdicao(produto) {
@@ -109,6 +105,7 @@ export default function Produtos({ aoNavegar }) {
     setErroFormulario('')
     setAviso('')
     setModalAberto(true)
+    carregarCategorias()
   }
 
   function fecharModal() {
@@ -278,8 +275,7 @@ export default function Produtos({ aoNavegar }) {
                     </td>
                     <td>
                       <span className="badge badge--categoria">
-                        {categoriasPorId.get(produto.id_categoria)?.nome ||
-                          'Sem categoria'}
+                        {produto.categoria_nome || 'Sem categoria'}
                       </span>
                     </td>
                     <td>
@@ -330,7 +326,9 @@ export default function Produtos({ aoNavegar }) {
           aoFechar={fecharModal}
           largo
         >
-          {categorias.length === 0 ? (
+          {carregandoCategorias ? (
+            <div className="estado-carregando">Carregando categorias…</div>
+          ) : categorias.length === 0 ? (
             <div className="alerta">
               Cadastre uma categoria antes de criar produtos.{' '}
               <button
@@ -371,9 +369,12 @@ export default function Produtos({ aoNavegar }) {
                   onChange={(evento) =>
                     alterarCampo('id_categoria', evento.target.value)
                   }
+                  disabled={carregandoCategorias}
                   required
                 >
-                  <option value="">Selecione…</option>
+                  <option value="">
+                    {carregandoCategorias ? 'Carregando…' : 'Selecione…'}
+                  </option>
                   {categorias.map((categoria) => (
                     <option
                       key={categoria.id_categoria}
@@ -451,7 +452,11 @@ export default function Produtos({ aoNavegar }) {
               <button
                 className="botao botao--primario"
                 type="submit"
-                disabled={salvando || categorias.length === 0}
+                disabled={
+                  salvando ||
+                  carregandoCategorias ||
+                  categorias.length === 0
+                }
               >
                 {salvando
                   ? 'Salvando…'

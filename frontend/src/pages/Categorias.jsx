@@ -1,5 +1,5 @@
 /** Gerenciamento de categorias usadas nos produtos. */
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { api, mensagemDeErro } from '../api'
 import Aviso from '../components/Aviso'
 import Icone from '../components/Icone'
@@ -7,7 +7,6 @@ import Modal from '../components/Modal'
 
 export default function Categorias({ aoNavegar }) {
   const [categorias, setCategorias] = useState([])
-  const [produtos, setProdutos] = useState([])
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState('')
   const [aviso, setAviso] = useState('')
@@ -22,14 +21,11 @@ export default function Categorias({ aoNavegar }) {
     setCarregando(true)
     setErro('')
 
-    Promise.all([
-      api.categorias.listar(),
-      api.produtos.listar({ limit: 200 }),
-    ])
-      .then(([respostaCategorias, respostaProdutos]) => {
-        if (!ativo) return
-        setCategorias(respostaCategorias.dados.categorias)
-        setProdutos(respostaProdutos.dados.produtos)
+    // A API já devolve `produtos_count`; não é preciso baixar os produtos.
+    api.categorias
+      .listar()
+      .then((resposta) => {
+        if (ativo) setCategorias(resposta.dados.categorias)
       })
       .catch((falha) => {
         if (ativo) setErro(mensagemDeErro(falha))
@@ -44,17 +40,6 @@ export default function Categorias({ aoNavegar }) {
   }, [])
 
   useEffect(() => carregar(), [carregar])
-
-  const quantidadePorCategoria = useMemo(() => {
-    const contagem = new Map()
-    for (const produto of produtos) {
-      contagem.set(
-        produto.id_categoria,
-        (contagem.get(produto.id_categoria) || 0) + 1,
-      )
-    }
-    return contagem
-  }, [produtos])
 
   async function criar(evento) {
     evento.preventDefault()
@@ -118,7 +103,7 @@ export default function Categorias({ aoNavegar }) {
   }
 
   async function excluir(categoria) {
-    if ((quantidadePorCategoria.get(categoria.id_categoria) || 0) > 0) {
+    if ((categoria.produtos_count || 0) > 0) {
       setErro(
         'Não é possível excluir uma categoria com produtos vinculados. Mova ou exclua os produtos antes.',
       )
@@ -227,8 +212,7 @@ export default function Categorias({ aoNavegar }) {
               </thead>
               <tbody>
                 {categorias.map((categoria) => {
-                  const quantidade =
-                    quantidadePorCategoria.get(categoria.id_categoria) || 0
+                  const quantidade = categoria.produtos_count || 0
                   return (
                     <tr key={categoria.id_categoria}>
                       <td>

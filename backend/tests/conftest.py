@@ -23,7 +23,16 @@ PADRAO_CNPJ_BD = "BD%"
 @pytest.fixture(scope="session")
 def app():
     """Aplicação Flask em modo de teste, com o banco validado na inicialização."""
-    aplicacao = create_app({"TESTING": True, "DEBUG": False})
+    aplicacao = create_app(
+        {
+            "TESTING": True,
+            "DEBUG": False,
+            # Só nos testes: scrypt (padrão de produção) é propositalmente lento
+            # e custa ~0,5 s por hash nesta máquina. PBKDF2 com 1.000 iterações
+            # mantém o fluxo de hash/verificação real e acelera a suíte.
+            "SENHA_HASH_METODO": "pbkdf2:sha256:1000",
+        }
+    )
     with aplicacao.app_context():
         with get_engine().connect() as conexao:
             conexao.execute(text("SELECT 1"))

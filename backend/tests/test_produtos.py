@@ -104,6 +104,7 @@ def test_prd_p01_criar_produto_valido(app, client):
     assert dados["id_empresa"] == id_empresa  # veio da sessão
     assert dados["preco"] == "3.50"
     assert dados["unidade_estoque"] == 10
+    assert dados["categoria_nome"] == "Geral"
 
 
 def test_prd_p02_estoque_omitido_comeca_em_zero(app, client):
@@ -376,6 +377,8 @@ def test_prd_p08_listar_produtos_da_empresa(app, client):
     assert dados["total"] >= 1
     ids = [produto["id_produto"] for produto in dados["produtos"]]
     assert id_produto in ids
+    produto = next(p for p in dados["produtos"] if p["id_produto"] == id_produto)
+    assert produto["categoria_nome"] == "Geral"
 
 
 def test_prd_p11_alterar_sku(app, client):
