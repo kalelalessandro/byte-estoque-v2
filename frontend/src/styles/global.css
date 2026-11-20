@@ -1831,3 +1831,9 @@ a {
     margin-left: 0;
   }
 }
+
+.interacoes__ajuda {
+  margin: 6px 0 0;
+  color: var(--texto-fraco);
+  font-size: 0.8rem;
+}

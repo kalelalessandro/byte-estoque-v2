@@ -1,4 +1,8 @@
-"""Rotas de interações (contatos) com parceiros.
+"""Rotas de interações com parceiros: contratos e compras.
+
+Interação é um fato comercial com o parceiro: um cliente comprou, um cliente pediu
+reembolso, um fornecedor assinou contrato, um fornecedor foi pago pelo fornecimento.
+O tipo do fato fica na coluna ``canal`` (ver ``interactions_rules.py``).
 
 Fazem parte da tela de parceiros ("Acessar Parceiro" → "Registrar Interação" /
 "Consultar Interação" / "Alterar Interação" no fluxograma). Todas exigem login:
@@ -14,7 +18,7 @@ Regras (Documentação do Banco v1.2, tabela ``interacoes``):
   JSON, e não muda ao alterar a interação.
 - O banco só confere se parceiro e usuário EXISTEM; a aplicação garante que o parceiro
   é da mesma empresa do usuário (parceiro de outra empresa responde 404).
-- Dois contatos no mesmo dia com o mesmo parceiro são permitidos.
+- Duas interações no mesmo dia com o mesmo parceiro são permitidas (ex.: compra e pagamento).
 - Não há exclusão de interação no fluxo: o histórico é preservado.
 """
 

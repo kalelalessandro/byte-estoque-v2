@@ -16,14 +16,15 @@ Docker, sem mock, usando o `test_client` do Flask.
   extras: validação de CPF/CNPJ, máscara, busca, filtro por tipo, paginação e
   isolamento entre empresas
 - **14 casos de interações (INT)** → 14 passando (INT-P01..P07, INT-N01..N07), mais
-  extras de data, responsável e isolamento entre empresas
+  extras de data, responsável, isolamento entre empresas e os tipos de negócio
+  (compra, reembolso, contrato, pagamento)
 - **4 extras** de fluxo/transação (`test_fluxo_empresa.py`)
 - **3 extras** de performance/dashboard: resumo agregado por empresa
   (`test_dashboard.py`)
 - **1 extra** de configuração: hash padrão do cadastro nunca fica `None`
   (`test_config.py`)
 - Limpeza automática dos dados criados, antes e depois de cada teste
-- Resultado atual da suíte: **230 passed, 4 skipped, 1 xfailed**
+- Resultado atual da suíte: **235 passed, 4 skipped, 1 xfailed**
 
 ---
 
@@ -139,6 +140,10 @@ requisição, mantendo o resultado esperado de cada caso:
   antes de o `banco_limpo` remover usuários e empresas (FKs `RESTRICT`).
   PAR-N20 e PAR-N21 criam a operação e o título por SQL direto, pois esses módulos
   ainda não têm API.
+- **Interação = contratos e compras.** O tipo da interação fica na coluna `canal`
+  (texto livre, até 30). Os casos INT do plano usam "telefone"/"WhatsApp" apenas
+  como exemplos de texto; o texto desses casos no PDF ainda descreve "contato" e
+  precisa ser atualizado na documentação. O schema não mudou.
 - O app de teste usa PBKDF2 com poucas iterações via `SENHA_HASH_METODO` para
   acelerar a suíte; em produção o cadastro continua usando `scrypt`.
 - Os dados criados via API são registrados em `tests/helpers.py`

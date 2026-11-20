@@ -4,6 +4,8 @@
  * Segue o fluxo do fluxograma: Listar Parceiros → Acessar Parceiro (dados +
  * interações) → Alterar Parceiro → Apagar Parceiro; e Inserir Parceiro Novo →
  * Registrar Interação (o parceiro recém-criado já abre no "Acessar Parceiro").
+ * Interações são contratos e compras: venda/reembolso a cliente, contrato/pagamento
+ * de fornecedor.
  */
 import { useEffect, useState } from 'react'
 import { api, mensagemDeErro } from '../api'
@@ -122,7 +124,10 @@ export default function Parceiros() {
         <div>
           <span className="rotulo-secao">Relacionamento</span>
           <h2>Parceiros</h2>
-          <p>Clientes e fornecedores da sua empresa, com o histórico de contatos.</p>
+          <p>
+            Clientes e fornecedores da sua empresa, com o histórico de compras,
+            contratos e pagamentos.
+          </p>
         </div>
         <div className="pagina__acoes">
           <button

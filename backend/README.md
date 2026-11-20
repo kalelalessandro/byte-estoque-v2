@@ -102,10 +102,19 @@ ao menos um marcado). Regras (Documentação do Banco v1.2 e plano de testes PAR
   A empresa do parceiro nunca muda.
 - `DELETE` é bloqueado (409) quando existem **interações, operações ou títulos
   financeiros** vinculados; a resposta traz `vinculos` com a contagem de cada tipo.
-- Interações: `ocorrencia` (data `AAAA-MM-DD` ou `DD/MM/AAAA`, tem que existir),
-  `canal` (texto de até 30) e `descricao` obrigatórios. Vários contatos no mesmo
-  dia são permitidos. A consulta do histórico vem em `GET /api/parceiros/<id>`
-  (campo `interacoes`, mais recentes primeiro). Não há exclusão de interação.
+- **Interação = contratos e compras com o parceiro**: cliente comprou, cliente
+  pediu reembolso, fornecedor assinou contrato, fornecedor foi pago pelo
+  fornecimento. Campos: `ocorrencia` (data do fato, `AAAA-MM-DD` ou `DD/MM/AAAA`,
+  tem que existir), `canal` e `descricao`, todos obrigatórios. O **tipo** do fato
+  (Compra, Reembolso, Contrato, Pagamento...) vai em `canal` (nome da coluna no
+  schema; a tela mostra "Tipo de interação"), texto livre de até 30 caracteres;
+  a tela sugere os tipos conforme o parceiro seja cliente, fornecedor ou ambos.
+  Valores, número do pedido etc. vão na `descricao`. Várias interações no mesmo dia
+  são permitidas. A consulta do histórico vem em `GET /api/parceiros/<id>` (campo
+  `interacoes`, mais recentes primeiro). Não há exclusão de interação.
+- A tabela `interacoes` não tem colunas de valor nem de vínculo com operação ou
+  título; compras, vendas e pagamentos com valor e estoque são tratados pelos
+  módulos de operações e financeiro (ainda sem API).
 
 ### `POST /api/auth/cadastro`
 
@@ -247,7 +256,7 @@ uv run pytest tests/test_parceiros.py
 uv run pytest tests/test_interacoes.py
 ```
 
-Resultado esperado: **230 passed, 4 skipped, 1 xfailed** (3 skips de UI/E2E da
+Resultado esperado: **235 passed, 4 skipped, 1 xfailed** (3 skips de UI/E2E da
 autenticação + PRD-N22 de confirmação visual; o xfail é o LOG-P08, impossível
 pelo schema `usuarios.id_empresa NOT NULL`; veja
 [tests/README.md](tests/README.md)).

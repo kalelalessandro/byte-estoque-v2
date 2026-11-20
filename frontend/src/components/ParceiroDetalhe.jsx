@@ -1,6 +1,9 @@
 /**
  * "Acessar Parceiro": dados completos do parceiro + histórico de interações.
  *
+ * Interações são contratos e compras com o parceiro: cliente comprou, cliente pediu
+ * reembolso, fornecedor assinou contrato, fornecedor foi pago pelo fornecimento.
+ *
  * Daqui o usuário pode alterar o parceiro (o formulário é aberto pela página),
  * registrar uma interação nova e alterar uma interação existente.
  */
@@ -115,10 +118,15 @@ export default function ParceiroDetalhe({ idParceiro, aoFechar, aoEditar }) {
               ) : null}
             </header>
 
+            <p className="interacoes__ajuda">
+              Compras, reembolsos, contratos e pagamentos feitos com este parceiro.
+            </p>
+
             {aviso ? <Aviso tipo="sucesso">{aviso}</Aviso> : null}
 
             {formulario === 'nova' ? (
               <InteracaoFormulario
+                parceiro={parceiro}
                 rotuloSalvar="Salvar interação"
                 salvar={registrar}
                 aoCancelar={() => setFormulario(null)}
@@ -136,6 +144,7 @@ export default function ParceiroDetalhe({ idParceiro, aoFechar, aoEditar }) {
                 formulario === interacao.interacao_id ? (
                   <li key={interacao.interacao_id} className="interacao">
                     <InteracaoFormulario
+                      parceiro={parceiro}
                       inicial={interacao}
                       rotuloSalvar="Salvar alterações"
                       salvar={(dados) => alterar(interacao, dados)}

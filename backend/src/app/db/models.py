@@ -111,8 +111,10 @@ class Parceiro(Base):
 
 
 class Interacao(Base):
-    """Contato registrado com um parceiro (tabela ``interacoes``).
+    """Fato comercial registrado com um parceiro (tabela ``interacoes``).
 
+    Contratos e compras: venda a cliente, reembolso, contrato de fornecimento,
+    pagamento a fornecedor... O tipo do fato fica em ``canal`` (nome do schema).
     ``id_usuario`` é o responsável pelo registro. O banco só confere que o
     parceiro e o usuário EXISTEM; a aplicação garante que são da mesma empresa.
     """

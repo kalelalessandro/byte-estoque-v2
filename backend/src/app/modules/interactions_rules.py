@@ -1,16 +1,22 @@
 """Regras de validação dos campos de interação com parceiro.
 
+Uma INTERAÇÃO é um fato comercial entre a empresa e o parceiro: contratos e compras.
+Exemplos: um cliente comprou; um cliente pediu reembolso; um fornecedor assinou
+contrato de fornecimento; um fornecedor foi pago pelo fornecimento.
+
 Não acessa banco nem Flask: recebe o JSON já lido e devolve ``(valores, erros)``.
 
-Limites da tabela ``interacoes`` (``database/init/01_schema.sql``):
+Limites da tabela ``interacoes`` (``database/init/01_schema.sql``, que não muda):
 
-    ocorrencia  DATE          obrigatório (data do contato, sem horário)
+    ocorrencia  DATE          obrigatório (data do fato, sem horário)
     canal       VARCHAR(30)   obrigatório
-    descricao   TEXT          obrigatório
+    descricao   TEXT          obrigatório (o que aconteceu, valores, número do pedido...)
 
-O canal é texto livre de até 30 caracteres (o plano de testes aceita qualquer valor
-dentro do limite, ex.: telefone, e-mail, WhatsApp, reunião). O responsável
-(``id_usuario``) NUNCA vem do JSON: é o usuário logado.
+A coluna ``canal`` guarda o TIPO da interação (Compra, Reembolso, Contrato, Pagamento...).
+Mantivemos o nome ``canal`` no JSON e no banco porque é o nome do schema; a tela mostra
+"Tipo". É texto livre de até 30 caracteres: a tela sugere os tipos mais comuns, mas a
+API não restringe a uma lista fixa (o plano de testes exige aceitar qualquer valor dentro
+do limite). O responsável (``id_usuario``) NUNCA vem do JSON: é o usuário logado.
 """
 
 from __future__ import annotations
@@ -30,7 +36,7 @@ CAMPOS_INTERACAO = {"ocorrencia", "canal", "descricao"}
 
 
 def _validar_data(valor, erros: dict) -> date | None:
-    """Data obrigatória e REAL (``31/02/2026`` é recusada)."""
+    """Data da interação: obrigatória e REAL (``31/02/2026`` é recusada)."""
     if valor is None or (isinstance(valor, str) and not valor.strip()):
         erros["ocorrencia"] = "Data é obrigatória."
         return None
@@ -61,18 +67,20 @@ def _validar_data(valor, erros: dict) -> date | None:
 
 
 def _validar_canal(valor, erros: dict) -> str | None:
-    """Canal obrigatório, aparado, até 30 caracteres."""
+    """Tipo da interação (coluna ``canal``): obrigatório, aparado, até 30 caracteres."""
     if valor is None:
         valor = ""
     if not isinstance(valor, str):
-        erros["canal"] = "Canal deve ser um texto."
+        erros["canal"] = "Tipo da interação deve ser um texto."
         return None
     valor = valor.strip()
     if not valor:
-        erros["canal"] = "Canal é obrigatório."
+        erros["canal"] = "Tipo da interação é obrigatório."
         return None
     if len(valor) > TAMANHO_MAXIMO_CANAL:
-        erros["canal"] = f"Canal deve ter no máximo {TAMANHO_MAXIMO_CANAL} caracteres."
+        erros["canal"] = (
+            f"Tipo da interação deve ter no máximo {TAMANHO_MAXIMO_CANAL} caracteres."
+        )
         return None
     return valor
 

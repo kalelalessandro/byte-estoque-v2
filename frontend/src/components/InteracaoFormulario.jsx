@@ -1,5 +1,9 @@
 /**
- * Formulário (em linha) de interação com o parceiro: data, canal e descrição.
+ * Formulário (em linha) de interação com o parceiro: data, tipo e descrição.
+ *
+ * Interação é um fato comercial: contratos e compras (cliente comprou, cliente pediu
+ * reembolso, fornecedor assinou contrato, fornecedor foi pago). O tipo é guardado na
+ * coluna `canal` do banco (nome do schema) e enviado no campo `canal` da API.
  *
  * Serve para "Registrar Interação" e "Alterar Interação". Quem usa passa `salvar`
  * (função assíncrona que chama a API); se ela lançar erro, as mensagens da API
@@ -10,10 +14,21 @@ import { ApiError, mensagemDeErro } from '../api'
 import { hojeIso } from '../formatos'
 import Aviso from './Aviso'
 
-// Sugestões; o canal é texto livre de até 30 caracteres.
-const CANAIS_SUGERIDOS = ['Telefone', 'E-mail', 'WhatsApp', 'Reunião', 'Visita']
+// Sugestões de tipo por relacionamento; o tipo é texto livre de até 30 caracteres.
+const TIPOS_DE_CLIENTE = ['Compra', 'Reembolso', 'Contrato']
+const TIPOS_DE_FORNECEDOR = ['Contrato', 'Pagamento']
+
+/** Tipos sugeridos conforme o parceiro seja cliente, fornecedor ou os dois. */
+function tiposSugeridos(parceiro) {
+  if (!parceiro) return [...TIPOS_DE_CLIENTE, 'Pagamento']
+  const tipos = []
+  if (parceiro.e_cliente) tipos.push(...TIPOS_DE_CLIENTE)
+  if (parceiro.e_fornecedor) tipos.push(...TIPOS_DE_FORNECEDOR)
+  return [...new Set(tipos)] // "Contrato" aparece uma vez só
+}
 
 export default function InteracaoFormulario({
+  parceiro = null, // define as sugestões de tipo (cliente x fornecedor)
   inicial = null, // interação existente (alterar) ou null (registrar)
   rotuloSalvar,
   salvar, // async ({ ocorrencia, canal, descricao }) => void
@@ -68,19 +83,19 @@ export default function InteracaoFormulario({
         </div>
 
         <div className="campo">
-          <label htmlFor="interacao-canal">Canal *</label>
+          <label htmlFor="interacao-canal">Tipo de interação *</label>
           <input
             id="interacao-canal"
             type="text"
-            list="canais-sugeridos"
+            list="tipos-de-interacao"
             maxLength={30}
-            placeholder="Telefone, e-mail, WhatsApp…"
+            placeholder={tiposSugeridos(parceiro).join(', ')}
             value={formulario.canal}
             onChange={(evento) => alterar('canal', evento.target.value)}
           />
-          <datalist id="canais-sugeridos">
-            {CANAIS_SUGERIDOS.map((canal) => (
-              <option key={canal} value={canal} />
+          <datalist id="tipos-de-interacao">
+            {tiposSugeridos(parceiro).map((tipo) => (
+              <option key={tipo} value={tipo} />
             ))}
           </datalist>
           {erroDe('canal')}
@@ -91,7 +106,7 @@ export default function InteracaoFormulario({
           <textarea
             id="interacao-descricao"
             rows={3}
-            placeholder="O que foi tratado ou combinado neste contato"
+            placeholder="O que aconteceu: valores, pedido ou contrato, prazos…"
             value={formulario.descricao}
             onChange={(evento) => alterar('descricao', evento.target.value)}
           />

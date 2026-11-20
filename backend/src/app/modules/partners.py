@@ -8,8 +8,9 @@ Rotas (todas exigem login, igual ``GET /api/auth/me``):
     PATCH  /api/parceiros/<id>   altera dados e/ou relacionamento ("Alterar Parceiro")
     DELETE /api/parceiros/<id>   apaga o parceiro ("Apagar Parceiro")
 
-As interações (registrar/alterar contatos com o parceiro) ficam em
-``interactions.py``, sob ``/api/parceiros/<id>/interacoes``.
+As interações (contratos e compras com o parceiro: venda ao cliente, reembolso,
+contrato de fornecimento, pagamento ao fornecedor) ficam em ``interactions.py``, sob
+``/api/parceiros/<id>/interacoes``.
 
 Regras principais (Documentação do Banco v1.2 e plano de testes, módulos PAR/INT):
 

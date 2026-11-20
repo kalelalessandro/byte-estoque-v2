@@ -1,5 +1,11 @@
 """Testes do módulo INT - Interações com parceiros (plano de testes V1.3), pela API.
 
+Interação = fato comercial com o parceiro (contratos e compras). O TIPO fica na coluna
+``canal``; os casos do plano usam valores como "telefone"/"WhatsApp" só porque o campo é
+texto livre: o que vale aqui é o limite (30), a obrigatoriedade e a regra de empresa.
+Os testes ``test_tipos_de_negocio_*`` cobrem os exemplos reais (compra, reembolso, contrato,
+pagamento).
+
 Cada teste referencia o ID do caso do plano (INT-Pxx / INT-Nxx). "Consultar Interação"
 é o campo ``interacoes`` do ``GET /api/parceiros/<id>``.
 """
@@ -232,6 +238,47 @@ def test_int_n07_alterar_com_canal_de_31_caracteres(client):
 # ---------------------------------------------------------------------------
 # Extras: isolamento entre empresas e regras de integridade
 # ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "relacionamento, tipo, descricao",
+    [
+        ({}, "Compra", "Venda de 200 parafusos, pedido 1021, R$ 1.200,00"),
+        ({}, "Reembolso", "Cliente devolveu 20 parafusos; reembolso de R$ 120,00"),
+        (
+            {"e_cliente": False, "e_fornecedor": True},
+            "Contrato",
+            "Fornecedor assinou contrato de fornecimento por 12 meses",
+        ),
+        (
+            {"e_cliente": False, "e_fornecedor": True},
+            "Pagamento",
+            "Pagamento da entrega de agosto ao fornecedor",
+        ),
+    ],
+)
+def test_tipos_de_negocio_sao_registrados_para_cliente_e_fornecedor(
+    client, relacionamento, tipo, descricao
+):
+    """Compra/reembolso de cliente e contrato/pagamento de fornecedor viram interações."""
+    logar(client)
+    parceiro = criar_parceiro(client, nome="Parceiro de Negocio", **relacionamento)
+
+    dados = _registrar(client, parceiro["id_parceiro"], canal=tipo, descricao=descricao)
+
+    assert dados["canal"] == tipo
+    historico = obter_parceiro(client, parceiro["id_parceiro"])["interacoes"]
+    assert [(i["canal"], i["descricao"]) for i in historico] == [(tipo, descricao)]
+
+
+def test_tipo_obrigatorio_usa_a_linguagem_de_negocio(client):
+    logar(client)
+    parceiro = criar_parceiro(client, nome="Tipo Obrigatorio")
+
+    resposta = client.post(_rota(parceiro["id_parceiro"]), json=_interacao(canal=""))
+
+    assert resposta.status_code == 422
+    assert campos(resposta)["canal"] == "Tipo da interação é obrigatório."
 
 
 def test_aceita_data_no_formato_brasileiro(client):
