@@ -97,10 +97,12 @@ def test_dashboard_nao_mistura_empresas(app, client):
     assert dados_a == {
         "produtos": 1,
         "categorias": 1,
+        "parceiros": 0,
         "valor_estoque": "5.00",
     }
     assert dados_b == {
         "produtos": 2,
         "categorias": 1,
+        "parceiros": 0,
         "valor_estoque": "14.00",  # 2*4 + 3*2
     }

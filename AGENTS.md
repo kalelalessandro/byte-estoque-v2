@@ -16,7 +16,8 @@ Sistema SaaS multi-tenant de **CRM, Controle de Estoque e Gestão Financeira** (
   - ✅ Suíte de testes automatizados com `pytest` estruturada.
   - 🛠️ **Front-End Inicial (Em andamento):** Telas de Tela Inicial, Login/Cadastro, Cadastro Obrigatório de Empresa e Tela Principal Pós-Login (WIP).
   - ✅ Módulo de Produtos e Categorias implementado (CRUD multi-tenant + testes).
-  - ⏳ Demais módulos (parceiros, financeiro, caixa, etc.) pendentes.
+  - ✅ Módulo de Parceiros e Interações implementado (clientes/fornecedores, CRUD multi-tenant, histórico de contatos + testes PAR/INT + tela no front-end).
+  - ⏳ Demais módulos (operações, financeiro, caixa, etc.) pendentes.
 
 ---
 

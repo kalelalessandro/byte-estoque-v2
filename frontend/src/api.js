@@ -121,6 +121,42 @@ export const api = {
     excluir: (idProduto) =>
       requisitar(`/api/produtos/${idProduto}`, { method: 'DELETE' }),
   },
+
+  parceiros: {
+    // tipo: 'todos' | 'cliente' | 'fornecedor' | 'ambos'
+    listar: ({ busca = '', tipo = 'todos', limit = 50, offset = 0 } = {}) => {
+      const parametros = new URLSearchParams()
+      if (busca) parametros.set('busca', busca)
+      if (tipo !== 'todos') parametros.set('tipo', tipo)
+      parametros.set('limit', String(limit))
+      parametros.set('offset', String(offset))
+      return requisitar(`/api/parceiros?${parametros.toString()}`)
+    },
+    // Dados completos do parceiro + histórico de interações.
+    obter: (idParceiro) => requisitar(`/api/parceiros/${idParceiro}`),
+    criar: (dados) =>
+      requisitar('/api/parceiros', { method: 'POST', corpo: dados }),
+    editar: (idParceiro, dados) =>
+      requisitar(`/api/parceiros/${idParceiro}`, {
+        method: 'PATCH',
+        corpo: dados,
+      }),
+    excluir: (idParceiro) =>
+      requisitar(`/api/parceiros/${idParceiro}`, { method: 'DELETE' }),
+  },
+
+  interacoes: {
+    registrar: (idParceiro, dados) =>
+      requisitar(`/api/parceiros/${idParceiro}/interacoes`, {
+        method: 'POST',
+        corpo: dados,
+      }),
+    editar: (idParceiro, idInteracao, dados) =>
+      requisitar(`/api/parceiros/${idParceiro}/interacoes/${idInteracao}`, {
+        method: 'PATCH',
+        corpo: dados,
+      }),
+  },
 }
 
 /** Junta a mensagem geral com os erros por campo (quando existirem). */

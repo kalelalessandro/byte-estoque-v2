@@ -7,16 +7,18 @@ tabelas existentes em ``database/init/01_schema.sql``. Nunca chamamos
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import (
     Boolean,
+    Date,
     DateTime,
     ForeignKey,
     Integer,
     Numeric,
     String,
+    Text,
     func,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -84,3 +86,42 @@ class Produto(Base):
     descricao: Mapped[str | None] = mapped_column(String(500))
     unidade_estoque: Mapped[int] = mapped_column(Integer, default=0)
     preco: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+
+
+class Parceiro(Base):
+    """Cliente e/ou fornecedor de uma empresa (tabela ``parceiros``).
+
+    - ``documento`` (CPF/CNPJ sem pontuação) e ``email`` são únicos POR EMPRESA
+      quando informados; ausência é ``NULL`` (nunca texto vazio).
+    - Pelo menos um entre ``e_cliente`` e ``e_fornecedor`` deve ser verdadeiro
+      (CHECK do banco); os dois podem ser verdadeiros.
+    """
+
+    __tablename__ = "parceiros"
+
+    id_parceiro: Mapped[int] = mapped_column(primary_key=True)
+    id_empresa: Mapped[int] = mapped_column(ForeignKey("empresas.id_empresa"))
+    nome: Mapped[str] = mapped_column(String(150))
+    documento: Mapped[str | None] = mapped_column(String(14))
+    email: Mapped[str | None] = mapped_column(String(254))
+    cep: Mapped[str | None] = mapped_column(String(8))
+    e_cliente: Mapped[bool] = mapped_column(Boolean, default=False)
+    e_fornecedor: Mapped[bool] = mapped_column(Boolean, default=False)
+    observacao: Mapped[str | None] = mapped_column(Text)
+
+
+class Interacao(Base):
+    """Contato registrado com um parceiro (tabela ``interacoes``).
+
+    ``id_usuario`` é o responsável pelo registro. O banco só confere que o
+    parceiro e o usuário EXISTEM; a aplicação garante que são da mesma empresa.
+    """
+
+    __tablename__ = "interacoes"
+
+    interacao_id: Mapped[int] = mapped_column(primary_key=True)
+    id_parceiro: Mapped[int] = mapped_column(ForeignKey("parceiros.id_parceiro"))
+    id_usuario: Mapped[int] = mapped_column(ForeignKey("usuarios.id_usuario"))
+    ocorrencia: Mapped[date] = mapped_column(Date)
+    canal: Mapped[str] = mapped_column(String(30))
+    descricao: Mapped[str] = mapped_column(Text)

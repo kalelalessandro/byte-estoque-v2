@@ -6,10 +6,10 @@ const ITENS = [
   { id: 'inicio', rotulo: 'Início', icone: 'inicio' },
   { id: 'produtos', rotulo: 'Produtos', icone: 'produtos' },
   { id: 'categorias', rotulo: 'Categorias', icone: 'categorias' },
+  { id: 'parceiros', rotulo: 'Parceiros', icone: 'usuarios' },
 ]
 
 const FUTUROS = [
-  { rotulo: 'Parceiros', icone: 'usuarios' },
   { rotulo: 'Financeiro', icone: 'dinheiro' },
   { rotulo: 'Relatórios', icone: 'grafico' },
 ]

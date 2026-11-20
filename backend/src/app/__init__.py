@@ -3,7 +3,7 @@
 Responsabilidades deste módulo:
 - carregar as variáveis de ambiente (``backend/.env`` e ``database/.env``);
 - montar a URL do MySQL (SQLAlchemy + PyMySQL) a partir de ``database/.env``;
-- registrar os blueprints de autenticação (login e cadastro);
+- registrar os blueprints (autenticação, dashboard, categorias, produtos e parceiros);
 - expor rotas básicas (``/`` e ``/api/health``) e respostas JSON de erro.
 """
 
@@ -23,6 +23,8 @@ from .core.signup import bp as bp_signup
 from .db import get_engine, init_db
 from .modules.categories import bp as bp_categorias
 from .modules.dashboard import bp as bp_dashboard
+from .modules.interactions import bp as bp_interacoes
+from .modules.partners import bp as bp_parceiros
 from .modules.products import bp as bp_produtos
 
 # app/__init__.py -> app -> src -> backend -> raiz do projeto
@@ -117,6 +119,9 @@ def registrar_blueprints(app: Flask) -> None:
     app.register_blueprint(bp_categorias, url_prefix="/api/categorias")
     app.register_blueprint(bp_dashboard, url_prefix="/api/dashboard")
     app.register_blueprint(bp_produtos, url_prefix="/api/produtos")
+    app.register_blueprint(bp_parceiros, url_prefix="/api/parceiros")
+    # Interações moram sob /api/parceiros/<id>/interacoes (mesma tela de parceiros).
+    app.register_blueprint(bp_interacoes, url_prefix="/api/parceiros")
 
 
 def registrar_rotas_basicas(app: Flask) -> None:
@@ -126,7 +131,7 @@ def registrar_rotas_basicas(app: Flask) -> None:
             {
                 "ok": True,
                 "api": "Byte Estoque",
-                "descricao": "API de autenticação, dashboard, categorias e produtos.",
+                "descricao": "API de autenticação, dashboard, categorias, produtos e parceiros.",
                 "rotas": {
                     "health": "GET /api/health",
                     "cadastro": "POST /api/auth/cadastro",
@@ -141,6 +146,14 @@ def registrar_rotas_basicas(app: Flask) -> None:
                     "produtos": (
                         "GET/POST /api/produtos, "
                         "GET/PATCH/DELETE /api/produtos/<id>"
+                    ),
+                    "parceiros": (
+                        "GET/POST /api/parceiros, "
+                        "GET/PATCH/DELETE /api/parceiros/<id>"
+                    ),
+                    "interacoes": (
+                        "POST /api/parceiros/<id>/interacoes, "
+                        "PATCH /api/parceiros/<id>/interacoes/<interacao_id>"
                     ),
                 },
             }
