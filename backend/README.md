@@ -64,6 +64,7 @@ o `uv.lock` deve ser versionado no Git.
 | POST | `/api/auth/login` | não | Autentica e cria a sessão |
 | POST | `/api/auth/logout` | não | Encerra a sessão |
 | GET | `/api/auth/me` | **sim** | Dados do usuário logado |
+| GET | `/api/dashboard/resumo` | **sim** | Resumo agregado: produtos, categorias e valor em estoque |
 | POST | `/api/categorias` | **sim** | Cria uma categoria |
 | GET | `/api/categorias` | **sim** | Lista as categorias da empresa |
 | PATCH | `/api/categorias/<id>` | **sim** | Renomeia uma categoria |
@@ -214,7 +215,7 @@ uv run pytest tests/test_categorias.py
 uv run pytest tests/test_produtos.py
 ```
 
-Resultado esperado: **145 passed, 4 skipped, 1 xfailed** (3 skips de UI/E2E da
+Resultado esperado: **149 passed, 4 skipped, 1 xfailed** (3 skips de UI/E2E da
 autenticação + PRD-N22 de confirmação visual; o xfail é o LOG-P08, impossível
 pelo schema `usuarios.id_empresa NOT NULL`; veja
 [tests/README.md](tests/README.md)).

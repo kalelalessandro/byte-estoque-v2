@@ -12,8 +12,12 @@ Docker, sem mock, usando o `test_client` do Flask.
 - **35 casos de produtos (PRD)** → 34 passando + 1 skip de UI (PRD-N22), mais
   casos extras de segurança/isolamento entre empresas
 - **4 extras** de fluxo/transação (`test_fluxo_empresa.py`)
+- **3 extras** de performance/dashboard: resumo agregado por empresa
+  (`test_dashboard.py`)
+- **1 extra** de configuração: hash padrão do cadastro nunca fica `None`
+  (`test_config.py`)
 - Limpeza automática dos dados criados, antes e depois de cada teste
-- Resultado atual da suíte: **145 passed, 4 skipped, 1 xfailed**
+- Resultado atual da suíte: **149 passed, 4 skipped, 1 xfailed**
 
 ---
 
@@ -32,6 +36,7 @@ uv run pytest tests/test_login.py            # só LOG
 uv run pytest tests/test_cadastro_empresa.py # só EMP
 uv run pytest tests/test_categorias.py       # só CAT
 uv run pytest tests/test_produtos.py         # só PRD
+uv run pytest tests/test_dashboard.py        # resumo agregado do dashboard
 uv run pytest -m banco         # só SQL direto
 uv run pytest -k "LOG-N"       # filtra por ID
 ```
@@ -55,6 +60,8 @@ uv run pytest -k "LOG-N"       # filtra por ID
 | CAT — Categorias | CAT-P01..P06, CAT-N01..N12 | `test_categorias.py` | 18 (plano atualizado) |
 | PRD — Produtos | PRD-P01..P13, PRD-N01..N22 | `test_produtos.py` | 35 (34 + 1 skip) + extras |
 | Fluxo/transação (extras, fora do plano) | contexto de empresa, sinal defensivo e rollback atômico | `test_fluxo_empresa.py` | 4 |
+| Dashboard (extras, performance) | `GET /api/dashboard/resumo`: contagens + valor em estoque no banco, isolamento por empresa, 401 | `test_dashboard.py` | 3 |
+| Configuração (extra, regressão) | hash de senha padrão do cadastro é válido (nunca `None`) | `test_config.py` | 1 |
 
 Os IDs dos casos aparecem no nome de cada teste (ex.:
 `test_log_p02_cadastro_usuario_com_campos_validos`,
@@ -119,6 +126,8 @@ requisição, mantendo o resultado esperado de cada caso:
 - `test_produtos.py` e `test_categorias.py` têm fixtures próprias que apagam
   operações, produtos e categorias antes de o `banco_limpo` remover as empresas
   (por causa das FKs com `ON DELETE RESTRICT`).
+- O app de teste usa PBKDF2 com poucas iterações via `SENHA_HASH_METODO` para
+  acelerar a suíte; em produção o cadastro continua usando `scrypt`.
 - Os dados criados via API são registrados em `tests/helpers.py`
   (`EMAILS_CRIADOS`/`CNPJS_CRIADOS`). O fixture `banco_limpo` remove:
   usuários registrados/padrão, empresas vinculadas, empresas `BD...` inseridas

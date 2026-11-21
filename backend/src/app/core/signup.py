@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import re
 
-from flask import Blueprint
+from flask import Blueprint, current_app
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from werkzeug.security import generate_password_hash
@@ -323,7 +323,10 @@ def cadastro():
             nome=valores["nome"],
             email=valores["email"],
             telefone=valores["telefone"],
-            hash_senha=generate_password_hash(valores["senha"]),
+            hash_senha=generate_password_hash(
+                valores["senha"],
+                method=current_app.config.get("SENHA_HASH_METODO") or "scrypt",
+            ),
             admin_sistema=False,
         )
         db.add(usuario)

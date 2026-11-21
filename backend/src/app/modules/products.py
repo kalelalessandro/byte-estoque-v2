@@ -26,7 +26,7 @@ A validação/normalização dos campos fica em ``products_rules.py``.
 from __future__ import annotations
 
 from flask import Blueprint, g, request
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, select
 from sqlalchemy.exc import IntegrityError
 
 from ..core.auth_utils import (
@@ -51,22 +51,37 @@ LIMITE_MAXIMO = 200
 # ---------------------------------------------------------------------------
 
 
-def serializar_produto(produto: Produto) -> dict:
+def serializar_produto(
+    produto: Produto, categoria_nome: str | None = None
+) -> dict:
     """Produto -> dict JSON.
 
     O preço vai como TEXTO com 2 casas (``"10.50"``) para o JSON não introduzir
     erros de ponto flutuante; o frontend converte/formata como preferir.
+    ``categoria_nome`` evita que o front precise de uma segunda requisição para
+    exibir o nome da categoria na listagem.
     """
     return {
         "id_produto": produto.id_produto,
         "id_empresa": produto.id_empresa,
         "sku": produto.sku,
         "id_categoria": produto.id_categoria,
+        "categoria_nome": categoria_nome,
         "nome": produto.nome,
         "descricao": produto.descricao,
         "unidade_estoque": produto.unidade_estoque,
         "preco": f"{produto.preco:.2f}",
     }
+
+
+def _nome_categoria(id_categoria: int, id_empresa: int) -> str | None:
+    """Nome da categoria da empresa, para enriquecer as respostas de produto."""
+    return get_db().scalar(
+        select(Categoria.nome).where(
+            Categoria.id_categoria == id_categoria,
+            Categoria.id_empresa == id_empresa,
+        )
+    )
 
 
 def _buscar_produto_da_empresa(id_produto: int, *, travar: bool = False) -> Produto | None:
@@ -171,7 +186,11 @@ def criar_produto():
             campos={"sku": "SKU já cadastrado."},
         )
 
-    return resposta_ok(serializar_produto(produto), "Produto criado com sucesso.", 201)
+    return resposta_ok(
+        serializar_produto(produto, categoria.nome),
+        "Produto criado com sucesso.",
+        201,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -208,8 +227,15 @@ def listar_produtos():
 
     db = get_db()
     total = db.scalar(select(func.count()).select_from(Produto).where(*filtros))
-    produtos = db.scalars(
-        select(Produto)
+    produtos = db.execute(
+        select(Produto, Categoria.nome)
+        .join(
+            Categoria,
+            and_(
+                Categoria.id_categoria == Produto.id_categoria,
+                Categoria.id_empresa == Produto.id_empresa,
+            ),
+        )
         .where(*filtros)
         .order_by(Produto.nome, Produto.id_produto)
         .limit(limit)
@@ -218,7 +244,10 @@ def listar_produtos():
 
     return resposta_ok(
         {
-            "produtos": [serializar_produto(p) for p in produtos],
+            "produtos": [
+                serializar_produto(produto, categoria_nome)
+                for produto, categoria_nome in produtos
+            ],
             "total": total,
             "limit": limit,
             "offset": offset,
@@ -237,7 +266,11 @@ def obter_produto(id_produto: int):
     produto = _buscar_produto_da_empresa(id_produto)
     if produto is None:
         return _produto_nao_encontrado()
-    return resposta_ok(serializar_produto(produto))
+    return resposta_ok(
+        serializar_produto(
+            produto, _nome_categoria(produto.id_categoria, produto.id_empresa)
+        )
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -320,7 +353,12 @@ def alterar_produto(id_produto: int):
             campos={"sku": "SKU já cadastrado."},
         )
 
-    return resposta_ok(serializar_produto(produto), "Produto atualizado com sucesso.")
+    return resposta_ok(
+        serializar_produto(
+            produto, _nome_categoria(produto.id_categoria, produto.id_empresa)
+        ),
+        "Produto atualizado com sucesso.",
+    )
 
 
 # ---------------------------------------------------------------------------

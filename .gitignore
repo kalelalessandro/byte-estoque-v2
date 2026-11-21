@@ -10,3 +10,6 @@ backend/.uv-cache/
 .pytest_cache/
 pytest-cache-files-*/
 scriptsDEMO
+
+# Dependências do projeto
+**/node_modules/
