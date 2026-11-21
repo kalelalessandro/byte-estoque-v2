@@ -12,6 +12,7 @@ const MOEDA = new Intl.NumberFormat('pt-BR', {
 const RESUMO_VAZIO = {
   produtos: 0,
   categorias: 0,
+  parceiros: 0,
   valor_estoque: '0.00',
 }
 
@@ -74,10 +75,10 @@ export default function Inicio({ usuario, aoNavegar }) {
     {
       id: 'parceiros',
       rotulo: 'Parceiros',
-      valor: '—',
-      detalhe: 'Em breve',
+      valor: estado.dados.parceiros,
+      detalhe: 'clientes e fornecedores',
       icone: 'usuarios',
-      indisponivel: true,
+      acao: () => aoNavegar('parceiros'),
     },
     {
       id: 'estoque',
@@ -159,8 +160,8 @@ export default function Inicio({ usuario, aoNavegar }) {
         <span className="wip__etiqueta">Status do sistema</span>
         <h2>(WORK IN PROGRESS)</h2>
         <p>
-          O catálogo de produtos e categorias já está disponível. Os módulos de
-          parceiros, financeiro e caixa estão em construção.
+          O catálogo de produtos e categorias e o cadastro de parceiros já estão
+          disponíveis. Os módulos de financeiro e caixa estão em construção.
         </p>
       </section>
     </div>

@@ -6,12 +6,14 @@ import Sidebar from '../components/Sidebar'
 import Tela from '../components/Tela'
 import Categorias from './Categorias'
 import Inicio from './Inicio'
+import Parceiros from './Parceiros'
 import Produtos from './Produtos'
 
 const TITULOS = {
   inicio: 'Início',
   produtos: 'Produtos',
   categorias: 'Categorias',
+  parceiros: 'Parceiros',
 }
 
 function iniciais(nome = '') {
@@ -25,11 +27,12 @@ export default function TelaPrincipal({ usuario, aoSair }) {
 
   useEffect(() => {
     // Pré-aquece o cache das abas assim que o shell monta. Assim, quando o
-    // usuário clicar em Produtos/Categorias, os dados normalmente já chegaram.
+    // usuário clicar em Produtos/Categorias/Parceiros, os dados normalmente já chegaram.
     const temporizador = setTimeout(() => {
       Promise.allSettled([
         api.produtos.listar({ limit: 200 }),
         api.categorias.listar(),
+        api.parceiros.listar({ limit: 200 }),
       ])
     }, 150)
 
@@ -106,6 +109,7 @@ export default function TelaPrincipal({ usuario, aoSair }) {
             {pagina === 'categorias' ? (
               <Categorias aoNavegar={navegar} />
             ) : null}
+            {pagina === 'parceiros' ? <Parceiros /> : null}
           </main>
         </div>
       </div>

@@ -1597,3 +1597,243 @@ a {
     padding: 18px;
   }
 }
+
+/* Parceiros ---------------------------------------------------------------- */
+
+.botao--perigo {
+  margin-left: auto;
+  border-color: rgba(248, 113, 113, 0.45);
+  background: transparent;
+  color: #fca5a5;
+}
+
+.botao--perigo:hover:not(:disabled) {
+  border-color: #f87171;
+  background: rgba(248, 113, 113, 0.1);
+}
+
+.botao--perigo .icone {
+  width: 16px;
+  height: 16px;
+}
+
+.badge--cliente {
+  border-color: rgba(125, 211, 252, 0.3);
+  background: rgba(56, 189, 248, 0.08);
+  color: #bae6fd;
+}
+
+.badge--fornecedor {
+  border-color: rgba(249, 115, 22, 0.4);
+  background: rgba(249, 115, 22, 0.1);
+  color: var(--laranja-texto);
+}
+
+.tipos-parceiro {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* Filtro por relacionamento (Todos / Clientes / Fornecedores / Ambos). */
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 2px 0 14px;
+}
+
+.filtro {
+  padding: 6px 12px;
+  border: 1px solid var(--borda);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--texto-suave);
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 600;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.filtro:hover {
+  border-color: var(--laranja-texto);
+  color: var(--laranja-texto);
+}
+
+.filtro--ativo {
+  border-color: var(--laranja);
+  background: rgba(249, 115, 22, 0.14);
+  color: var(--laranja-texto);
+}
+
+/* Nome do parceiro na tabela: abre o "Acessar Parceiro". */
+.tabela__link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--texto);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+}
+
+.tabela__link:hover {
+  color: var(--laranja-texto);
+  text-decoration: underline;
+}
+
+/* Caixas de seleção Cliente / Fornecedor. */
+.campo.opcoes {
+  margin: 0;
+  padding: 0;
+  border: none;
+  min-width: 0;
+}
+
+.opcoes legend {
+  margin-bottom: 8px;
+  padding: 0;
+  color: var(--texto-suave);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.campo.opcoes .opcao {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: 18px;
+  color: var(--texto);
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.campo.opcoes .opcao input {
+  width: 17px;
+  height: 17px;
+  padding: 0;
+  accent-color: var(--laranja);
+  cursor: pointer;
+}
+
+/* "Acessar Parceiro": dados + interações. */
+.detalhe {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.detalhe__grade {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 18px;
+  margin: 0;
+}
+
+.detalhe__grade dt {
+  margin-bottom: 4px;
+  color: var(--texto-fraco);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.detalhe__grade dd {
+  margin: 0;
+  color: var(--texto);
+  font-size: 0.88rem;
+  overflow-wrap: anywhere;
+}
+
+.detalhe__largo {
+  grid-column: 1 / -1;
+}
+
+.detalhe__texto {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.interacoes {
+  padding-top: 16px;
+  border-top: 1px solid var(--borda);
+}
+
+.interacoes__topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.interacoes__topo h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.interacoes__vazio {
+  margin: 14px 0 0;
+  color: var(--texto-fraco);
+  font-size: 0.85rem;
+}
+
+.interacoes__lista {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.interacao {
+  padding: 12px 14px;
+  border: 1px solid var(--borda);
+  border-left: 3px solid var(--laranja);
+  border-radius: 8px;
+  background: var(--painel-claro);
+  font-size: 0.86rem;
+}
+
+.interacao__topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.interacao__topo small {
+  flex: 1;
+  color: var(--texto-fraco);
+}
+
+.interacao-form {
+  margin-top: 12px;
+}
+
+.interacao .interacao-form {
+  margin-top: 0;
+}
+
+@media (max-width: 560px) {
+  .detalhe__grade {
+    grid-template-columns: 1fr;
+  }
+
+  .botao--perigo {
+    margin-left: 0;
+  }
+}
+
+.interacoes__ajuda {
+  margin: 6px 0 0;
+  color: var(--texto-fraco);
+  font-size: 0.8rem;
+}

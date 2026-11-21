@@ -64,7 +64,7 @@ o `uv.lock` deve ser versionado no Git.
 | POST | `/api/auth/login` | não | Autentica e cria a sessão |
 | POST | `/api/auth/logout` | não | Encerra a sessão |
 | GET | `/api/auth/me` | **sim** | Dados do usuário logado |
-| GET | `/api/dashboard/resumo` | **sim** | Resumo agregado: produtos, categorias e valor em estoque |
+| GET | `/api/dashboard/resumo` | **sim** | Resumo agregado: produtos, categorias, parceiros e valor em estoque |
 | POST | `/api/categorias` | **sim** | Cria uma categoria |
 | GET | `/api/categorias` | **sim** | Lista as categorias da empresa |
 | PATCH | `/api/categorias/<id>` | **sim** | Renomeia uma categoria |
@@ -74,10 +74,47 @@ o `uv.lock` deve ser versionado no Git.
 | GET | `/api/produtos/<id>` | **sim** | Detalhe de um produto |
 | PATCH | `/api/produtos/<id>` | **sim** | Altera SKU, categoria, nome, descrição, estoque e/ou preço |
 | DELETE | `/api/produtos/<id>` | **sim** | Apaga produto (409 se houver registros vinculados) |
+| POST | `/api/parceiros` | **sim** | Cria um parceiro (cliente, fornecedor ou ambos) |
+| GET | `/api/parceiros` | **sim** | Lista parceiros (`busca`, `tipo`, `limit`, `offset`) |
+| GET | `/api/parceiros/<id>` | **sim** | Dados completos do parceiro + histórico de interações |
+| PATCH | `/api/parceiros/<id>` | **sim** | Altera nome, documento, e-mail, CEP, relacionamento e/ou observação |
+| DELETE | `/api/parceiros/<id>` | **sim** | Apaga parceiro (409 se houver interações, operações ou títulos) |
+| POST | `/api/parceiros/<id>/interacoes` | **sim** | Registra uma interação (o responsável é o usuário logado) |
+| PATCH | `/api/parceiros/<id>/interacoes/<interacao_id>` | **sim** | Altera data, canal e/ou descrição da interação |
 
-> Nas rotas de categorias e produtos a **empresa vem sempre da sessão**; o
-> `id_empresa` enviado no JSON é recusado. Categoria e SKU são únicos por
-> empresa, e a categoria do produto precisa ser da mesma empresa.
+> Nas rotas de categorias, produtos e parceiros a **empresa vem sempre da
+> sessão**; o `id_empresa` enviado no JSON é recusado. Categoria e SKU são únicos
+> por empresa, e a categoria do produto precisa ser da mesma empresa.
+
+### Parceiros e interações
+
+Parceiro é todo cliente e/ou fornecedor da empresa (`e_cliente` / `e_fornecedor`,
+ao menos um marcado). Regras (Documentação do Banco v1.2 e plano de testes PAR/INT):
+
+- `nome` obrigatório (até 150). `documento` (CPF de 11 dígitos ou CNPJ de 14
+  caracteres, alfanumérico), `e-mail` (até 254), `cep` (8 dígitos) e `observacao`
+  são opcionais; quando ausentes são gravados como `NULL`. A pontuação de documento
+  e CEP é removida, o documento vai em maiúsculas e o e-mail em minúsculas. Os
+  dígitos verificadores de CPF/CNPJ são conferidos pela API (o banco não confere).
+- **E-mail e documento são únicos por empresa** (409 se repetidos; a comparação
+  ignora maiúsculas e acentos). Texto só com espaços em documento/e-mail é recusado.
+- Em `PATCH`, enviar `null` em documento, e-mail, CEP ou observação limpa o campo.
+  A empresa do parceiro nunca muda.
+- `DELETE` é bloqueado (409) quando existem **interações, operações ou títulos
+  financeiros** vinculados; a resposta traz `vinculos` com a contagem de cada tipo.
+- **Interação = contratos e compras com o parceiro**: cliente comprou, cliente
+  pediu reembolso, fornecedor assinou contrato, fornecedor foi pago pelo
+  fornecimento. Campos: `ocorrencia` (data do fato, `AAAA-MM-DD` ou `DD/MM/AAAA`,
+  tem que existir), `canal` e `descricao`, todos obrigatórios. O **tipo** do fato
+  (Compra, Reembolso, Contrato, Pagamento...) vai em `canal` (nome da coluna no
+  schema; a tela mostra "Tipo de interação"), texto livre de até 30 caracteres;
+  a tela sugere os tipos conforme o parceiro seja cliente, fornecedor ou ambos.
+  Valores, número do pedido etc. vão na `descricao`. Várias interações no mesmo dia
+  são permitidas. A consulta do histórico vem em `GET /api/parceiros/<id>` (campo
+  `interacoes`, mais recentes primeiro). Não há exclusão de interação.
+- A tabela `interacoes` não tem colunas de valor nem de vínculo com operação ou
+  título; compras, vendas e pagamentos com valor e estoque são tratados pelos
+  módulos de operações e financeiro (ainda sem API).
 
 ### `POST /api/auth/cadastro`
 
@@ -213,9 +250,13 @@ uv run pytest -m banco
 # Só categorias / só produtos
 uv run pytest tests/test_categorias.py
 uv run pytest tests/test_produtos.py
+
+# Só parceiros (PAR) / só interações (INT)
+uv run pytest tests/test_parceiros.py
+uv run pytest tests/test_interacoes.py
 ```
 
-Resultado esperado: **149 passed, 4 skipped, 1 xfailed** (3 skips de UI/E2E da
+Resultado esperado: **235 passed, 4 skipped, 1 xfailed** (3 skips de UI/E2E da
 autenticação + PRD-N22 de confirmação visual; o xfail é o LOG-P08, impossível
 pelo schema `usuarios.id_empresa NOT NULL`; veja
 [tests/README.md](tests/README.md)).
@@ -266,6 +307,11 @@ backend/
 ├── src/app/
 │   ├── __init__.py           # create_app, config, CORS, health, handlers de erro
 │   ├── main.py               # ponto de entrada (python -m src.app.main)
+│   ├── modules/
+│   │   ├── partners.py       # parceiros: criar, listar, acessar, alterar, apagar
+│   │   ├── partners_rules.py # validação/normalização dos campos de parceiro
+│   │   ├── interactions.py   # interações: registrar e alterar
+│   │   └── interactions_rules.py  # validação dos campos de interação
 │   ├── core/
 │   │   ├── login.py          # POST /login, POST /logout, GET /me
 │   │   ├── signup.py         # POST /cadastro (empresa + usuário)
@@ -278,6 +324,9 @@ backend/
     ├── helpers.py            # payloads e atalhos (cadastro/login/me)
     ├── test_login.py         # LOG-Pxx / LOG-Nxx + COL/SEG correlatos
     ├── test_cadastro_empresa.py  # EMP-Pxx / EMP-Nxx
+    ├── test_parceiros.py     # PAR-Pxx / PAR-Nxx + isolamento, busca, filtros
+    ├── test_interacoes.py    # INT-Pxx / INT-Nxx + isolamento entre empresas
+    ├── apoio_parceiros.py    # login, payloads e limpeza de PAR/INT
     ├── test_fluxo_empresa.py # transação atômica + contexto de empresa
     └── test_integridade_banco_auth.py  # BDD/FKN/INTG de autenticação
 ```

@@ -1,8 +1,9 @@
-# Testes da API — Autenticação, Categorias e Produtos
+# Testes da API — Autenticação, Categorias, Produtos, Parceiros e Interações
 
 Suíte `pytest` baseada no `crm-estoque/docs/plano de testes.pdf` (V1.3),
 cobrindo **autenticação** (LOG/EMP e casos correlatos de BDD, FKN, INTG, COL e
-SEG), **categorias (CAT)** e **produtos (PRD)**. Roda contra o **MySQL real** do
+SEG), **categorias (CAT)**, **produtos (PRD)**, **parceiros (PAR)** e
+**interações (INT)**. Roda contra o **MySQL real** do
 Docker, sem mock, usando o `test_client` do Flask.
 
 - **83 casos de autenticação** → 83 passando + 3 skips + 1 xfail (LOG-P08 impossível)
@@ -11,13 +12,19 @@ Docker, sem mock, usando o `test_client` do Flask.
   segura de categorias)
 - **35 casos de produtos (PRD)** → 34 passando + 1 skip de UI (PRD-N22), mais
   casos extras de segurança/isolamento entre empresas
+- **35 casos de parceiros (PAR)** → 35 passando (PAR-P01..P14, PAR-N01..N21), mais
+  extras: validação de CPF/CNPJ, máscara, busca, filtro por tipo, paginação e
+  isolamento entre empresas
+- **14 casos de interações (INT)** → 14 passando (INT-P01..P07, INT-N01..N07), mais
+  extras de data, responsável, isolamento entre empresas e os tipos de negócio
+  (compra, reembolso, contrato, pagamento)
 - **4 extras** de fluxo/transação (`test_fluxo_empresa.py`)
 - **3 extras** de performance/dashboard: resumo agregado por empresa
   (`test_dashboard.py`)
 - **1 extra** de configuração: hash padrão do cadastro nunca fica `None`
   (`test_config.py`)
 - Limpeza automática dos dados criados, antes e depois de cada teste
-- Resultado atual da suíte: **149 passed, 4 skipped, 1 xfailed**
+- Resultado atual da suíte: **235 passed, 4 skipped, 1 xfailed**
 
 ---
 
@@ -59,8 +66,10 @@ uv run pytest -k "LOG-N"       # filtra por ID
 | INTG — Integridade referencial (auth) | INTG-N01, INTG-N11 | `test_integridade_banco_auth.py` | 2 |
 | CAT — Categorias | CAT-P01..P06, CAT-N01..N12 | `test_categorias.py` | 18 (plano atualizado) |
 | PRD — Produtos | PRD-P01..P13, PRD-N01..N22 | `test_produtos.py` | 35 (34 + 1 skip) + extras |
+| PAR — Parceiros | PAR-P01..P14, PAR-N01..N21 | `test_parceiros.py` | 35 + extras |
+| INT — Interações | INT-P01..P07, INT-N01..N07 | `test_interacoes.py` | 14 + extras |
 | Fluxo/transação (extras, fora do plano) | contexto de empresa, sinal defensivo e rollback atômico | `test_fluxo_empresa.py` | 4 |
-| Dashboard (extras, performance) | `GET /api/dashboard/resumo`: contagens + valor em estoque no banco, isolamento por empresa, 401 | `test_dashboard.py` | 3 |
+| Dashboard (extras, performance) | `GET /api/dashboard/resumo`: contagens (produtos, categorias, parceiros) + valor em estoque no banco, isolamento por empresa, 401 | `test_dashboard.py` | 3 |
 | Configuração (extra, regressão) | hash de senha padrão do cadastro é válido (nunca `None`) | `test_config.py` | 1 |
 
 Os IDs dos casos aparecem no nome de cada teste (ex.:
@@ -126,6 +135,15 @@ requisição, mantendo o resultado esperado de cada caso:
 - `test_produtos.py` e `test_categorias.py` têm fixtures próprias que apagam
   operações, produtos e categorias antes de o `banco_limpo` remover as empresas
   (por causa das FKs com `ON DELETE RESTRICT`).
+- `test_parceiros.py` e `test_interacoes.py` usam `tests/apoio_parceiros.py`, cuja
+  limpeza apaga títulos, operações, interações e parceiros das empresas de teste
+  antes de o `banco_limpo` remover usuários e empresas (FKs `RESTRICT`).
+  PAR-N20 e PAR-N21 criam a operação e o título por SQL direto, pois esses módulos
+  ainda não têm API.
+- **Interação = contratos e compras.** O tipo da interação fica na coluna `canal`
+  (texto livre, até 30). Os casos INT do plano usam "telefone"/"WhatsApp" apenas
+  como exemplos de texto; o texto desses casos no PDF ainda descreve "contato" e
+  precisa ser atualizado na documentação. O schema não mudou.
 - O app de teste usa PBKDF2 com poucas iterações via `SENHA_HASH_METODO` para
   acelerar a suíte; em produção o cadastro continua usando `scrypt`.
 - Os dados criados via API são registrados em `tests/helpers.py`
@@ -136,9 +154,9 @@ requisição, mantendo o resultado esperado de cada caso:
 
 ## Observações
 
-- Casos dos módulos **categorias (CAT)** e **produtos (PRD)** já estão
-  implementados e testados; os demais módulos do plano (parceiros, financeiro,
-  caixa, etc.) ainda não têm rotas na API.
+- Casos dos módulos **categorias (CAT)**, **produtos (PRD)**, **parceiros (PAR)**
+  e **interações (INT)** já estão implementados e testados; os demais módulos do
+  plano (financeiro, caixa, etc.) ainda não têm rotas na API.
 - Casos `CAR-N0x` (cargos) e `INTG-N02..N04` (exclusão de usuário com operações/
   interações/caixas) dependem de módulos que ainda não têm API; ficam para a
   próxima etapa.

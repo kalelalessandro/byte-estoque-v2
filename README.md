@@ -61,10 +61,12 @@ de sessão funciona sem configuração extra de CORS.
 ### Primeiro acesso
 
 1. Clique em **Criar conta** e cadastre a empresa + o usuário.
-2. Você entra no **Início**, com o resumo de produtos, categorias e valor em
-   estoque.
-3. Use a sidebar para gerenciar **Produtos** (criar, editar, excluir, buscar) e
-   **Categorias** (criar, renomear, excluir categorias sem produtos).
+2. Você entra no **Início**, com o resumo de produtos, categorias, parceiros e
+   valor em estoque.
+3. Use a sidebar para gerenciar **Produtos** (criar, editar, excluir, buscar),
+   **Categorias** (criar, renomear, excluir categorias sem produtos) e
+   **Parceiros** (clientes e/ou fornecedores: inserir, acessar, alterar, apagar e
+   registrar interações).
 
 ## 4. Testes automatizados
 
@@ -75,7 +77,7 @@ cd backend
 uv run pytest
 ```
 
-Resultado esperado: **149 passed, 4 skipped, 1 xfailed**.
+Resultado esperado: **230 passed, 4 skipped, 1 xfailed**.
 
 > Os testes usam um hash de senha rápido (`PBKDF2`) **somente no ambiente de
 > teste**, para não gastar ~1 s por conta criada. Em produção o hash continua
