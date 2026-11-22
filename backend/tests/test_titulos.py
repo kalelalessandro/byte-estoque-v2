@@ -121,9 +121,9 @@ def test_tit_p04_registrar_conta_a_receber_sem_parceiro(client):
 
     assert dados["parceiro"] is None
     assert dados["id_operacao"] is None
-    # Sem parceiro o título existe, mas a tela de baixas não o liquida.
-    assert dados["pode_baixar"] is False
-    assert "parceiro" in dados["motivo_sem_baixa"]
+    # O título sem parceiro pode ser baixado normalmente.
+    assert dados["pode_baixar"] is True
+    assert dados["motivo_sem_baixa"] is None
 
 
 def test_tit_p05_titulo_vinculado_a_operacao_e_ao_parceiro(app, client):

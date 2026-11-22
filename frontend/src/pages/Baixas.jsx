@@ -4,8 +4,8 @@
  *
  * Fluxo do fluxograma: Listar Baixas -> Consultar Baixas, e Registrar Baixas
  * Manualmente -> Selecionar Título/Caixa Aberto -> Informar Dados -> Salvar & Registrar.
- * Toda baixa está ligada a um parceiro (o do título). O Guia ao lado mostra as
- * interações (contratos e compras) cadastradas em Parceiros.
+ * Toda baixa é ligada a um caixa aberto; o parceiro do título é opcional. O Guia
+ * ao lado mostra as interações (contratos e compras) quando o título tem parceiro.
  */
 import { useEffect, useState } from 'react'
 import { api, mensagemDeErro } from '../api'
@@ -87,8 +87,8 @@ export default function Baixas({ aoMudarAba = null }) {
         <div>
           <h3>Baixas financeiras</h3>
           <p>
-            Pagamentos e recebimentos efetivos de títulos, sempre ligados a um parceiro
-            e a um caixa aberto.
+            Pagamentos e recebimentos efetivos de títulos, ligados a um caixa aberto
+            (o parceiro do título é opcional).
           </p>
         </div>
         <div className="pagina__acoes">

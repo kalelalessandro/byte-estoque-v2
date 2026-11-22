@@ -1,8 +1,8 @@
 """Testes do módulo BAI - Baixas Financeiras (plano de testes V1.3), pela API.
 
 Cada teste referencia o ID do caso do plano (BAI-Pxx / BAI-Nxx), de segurança
-(SEG-N07/N08) ou de concorrência (CON-N03/N04). Além do plano, cobrem a regra desta
-tela: TODA baixa é ligada a um parceiro (via título), e o guia de interações.
+(SEG-N07/N08) ou de concorrência (CON-N03/N04). O parceiro do título é opcional:
+títulos sem parceiro também aceitam baixa.
 """
 
 from __future__ import annotations
@@ -300,31 +300,33 @@ def test_baixa_em_caixa_fechado_e_recusada(app, client):
 
 
 # ---------------------------------------------------------------------------
-# Regra desta tela: toda baixa tem parceiro
+# Baixa em título sem parceiro
 # ---------------------------------------------------------------------------
 
 
-def test_baixa_em_titulo_sem_parceiro_e_recusada(app, client):
+def test_baixa_em_titulo_sem_parceiro_e_permitida(app, client):
     conta = logar(client)
     id_titulo = inserir_titulo(app, conta["id_empresa"], None, valor="80.00",
                                descricao="Conta de energia")
     id_caixa = abrir_caixa(app, conta["id_usuario"])
 
-    resposta = _recusada(client, id_titulo, id_caixa, 422, "id_titulo", valor="80.00")
+    baixa = _registrar(client, id_titulo, id_caixa, valor="80.00")
 
-    assert "parceiro" in resposta.get_json()["erro"]
-    assert contar_baixas(app, id_titulo) == 0
+    assert baixa["parceiro"] is None
+    assert baixa["titulo"]["saldo_pendente"] == "0.00"
+    assert contar_baixas(app, id_titulo) == 1
 
 
-def test_titulo_sem_parceiro_nao_e_oferecido_e_e_contado(app, client):
+def test_titulo_sem_parceiro_e_oferecido_nas_opcoes(app, client):
     conta, _, id_com, _ = _cenario(app, client)
-    inserir_titulo(app, conta["id_empresa"], None, valor="80.00")
+    id_sem = inserir_titulo(app, conta["id_empresa"], None, valor="80.00")
 
     opcoes = client.get("/api/baixas/opcoes").get_json()["dados"]
 
-    assert [t["id_titulo"] for t in opcoes["titulos"]] == [id_com]
-    assert opcoes["titulos_sem_parceiro"] == 1
-    assert opcoes["titulos"][0]["parceiro"]["nome"] == "Parceiro de Baixa"
+    por_id = {item["id_titulo"]: item for item in opcoes["titulos"]}
+    assert set(por_id) == {id_com, id_sem}
+    assert por_id[id_sem]["parceiro"] is None
+    assert por_id[id_com]["parceiro"]["nome"] == "Parceiro de Baixa"
 
 
 def test_opcoes_oferece_so_titulos_com_saldo_e_nao_cancelados(app, client):

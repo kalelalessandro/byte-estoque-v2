@@ -27,6 +27,7 @@ from .modules.caixas import bp as bp_caixas
 from .modules.dashboard import bp as bp_dashboard
 from .modules.interactions import bp as bp_interacoes
 from .modules.interactions import bp_guia as bp_guia_interacoes
+from .modules.operations import bp as bp_operacoes
 from .modules.partners import bp as bp_parceiros
 from .modules.products import bp as bp_produtos
 from .modules.titulos import bp as bp_titulos
@@ -130,6 +131,7 @@ def registrar_blueprints(app: Flask) -> None:
     app.register_blueprint(bp_baixas, url_prefix="/api/baixas")
     app.register_blueprint(bp_titulos, url_prefix="/api/titulos")
     app.register_blueprint(bp_caixas, url_prefix="/api/caixas")
+    app.register_blueprint(bp_operacoes, url_prefix="/api/operacoes")
 
 
 def registrar_rotas_basicas(app: Flask) -> None:
@@ -175,6 +177,10 @@ def registrar_rotas_basicas(app: Flask) -> None:
                     "caixas": (
                         "GET/POST /api/caixas, GET /api/caixas/atual, GET /api/caixas/<id>, "
                         "POST /api/caixas/<id>/movimentos, POST /api/caixas/<id>/fechar"
+                    ),
+                    "operacoes": (
+                        "GET/POST /api/operacoes, GET/PATCH /api/operacoes/<id>, "
+                        "POST /api/operacoes/<id>/cancelar"
                     ),
                 },
             }

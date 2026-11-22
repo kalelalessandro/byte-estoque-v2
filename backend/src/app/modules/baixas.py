@@ -110,7 +110,7 @@ def serializar_baixa(
     parceiro: Parceiro | None,
     total_baixado: Decimal | None = None,
 ) -> dict:
-    """Baixa + resumo do título e do PARCEIRO (o vínculo exigido pela tela)."""
+    """Baixa + resumo do título e do PARCEIRO, quando o título tiver parceiro."""
     return {
         "id_baixa": baixa.id_baixa,
         "id_titulo": baixa.id_titulo,
@@ -172,9 +172,8 @@ def _ler_inteiro_query(nome: str, padrao: int, minimo: int, maximo: int):
 def opcoes_de_baixa():
     """Títulos que aceitam baixa, caixas abertos e formas de pagamento.
 
-    Títulos oferecidos: da empresa, NÃO cancelados, COM parceiro e com saldo pendente
-    maior que zero. ``titulos_sem_parceiro`` conta os que ficaram de fora só por não
-    terem parceiro, para a tela poder avisar.
+    Títulos oferecidos: da empresa, NÃO cancelados e com saldo pendente maior que
+    zero. O parceiro é opcional: títulos sem parceiro também podem ser baixados.
     """
     db = get_db()
     id_empresa = g.usuario.id_empresa
@@ -204,15 +203,9 @@ def opcoes_de_baixa():
     )
 
     linhas = db.execute(
-        base.where(Parceiro.id_parceiro.is_not(None))
-        .order_by(TituloFinanceiro.vencimento, TituloFinanceiro.id_titulo)
+        base.order_by(TituloFinanceiro.vencimento, TituloFinanceiro.id_titulo)
         .limit(LIMITE_OPCOES)
     ).all()
-    sem_parceiro = db.scalar(
-        select(func.count()).select_from(
-            base.where(Parceiro.id_parceiro.is_(None)).subquery()
-        )
-    )
 
     titulos = []
     for titulo, parceiro, saldo_pendente in linhas:
@@ -233,7 +226,6 @@ def opcoes_de_baixa():
     return resposta_ok(
         {
             "titulos": titulos,
-            "titulos_sem_parceiro": sem_parceiro or 0,
             "caixas": caixas,
             "formas_pagamento": list(FORMAS_PAGAMENTO),
         }
@@ -404,7 +396,8 @@ def registrar_baixa():
             campos={"id_titulo": "Título cancelado."},
         )
 
-    # 3) Toda baixa precisa de parceiro (da mesma empresa).
+    # 3) Parceiro é OPCIONAL: título sem parceiro também pode ser baixado.
+    #    Porém, se o título aponta para um parceiro, ele precisa ser da empresa.
     parceiro = None
     if titulo.id_parceiro is not None:
         parceiro = db.scalar(
@@ -413,14 +406,13 @@ def registrar_baixa():
                 Parceiro.id_empresa == id_empresa,
             )
         )
-    if parceiro is None:
-        db.rollback()
-        return resposta_erro(
-            "Este título não tem parceiro vinculado. Toda baixa precisa estar ligada a "
-            "um parceiro: vincule um cliente ou fornecedor ao título antes de dar baixa.",
-            422,
-            campos={"id_titulo": "Título sem parceiro."},
-        )
+        if parceiro is None:
+            db.rollback()
+            return resposta_erro(
+                "O parceiro vinculado ao título não pertence a esta empresa.",
+                422,
+                campos={"id_titulo": "Parceiro do título inválido."},
+            )
 
     # 4) Trava o CAIXA (da empresa do usuário) e confere se continua aberto.
     caixa = db.scalar(

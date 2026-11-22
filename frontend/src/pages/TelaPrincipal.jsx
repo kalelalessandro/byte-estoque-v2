@@ -7,6 +7,7 @@ import Tela from '../components/Tela'
 import Categorias from './Categorias'
 import Financeiro from './Financeiro'
 import Inicio from './Inicio'
+import Operacoes from './Operacoes'
 import Parceiros from './Parceiros'
 import Produtos from './Produtos'
 
@@ -14,6 +15,7 @@ const TITULOS = {
   inicio: 'Início',
   produtos: 'Produtos',
   categorias: 'Categorias',
+  operacoes: 'Operações',
   parceiros: 'Parceiros',
   financeiro: 'Financeiro',
 }
@@ -37,6 +39,7 @@ export default function TelaPrincipal({ usuario, aoSair }) {
         api.produtos.listar({ limit: 200 }),
         api.categorias.listar(),
         api.parceiros.listar({ limit: 200 }),
+        api.operacoes.listar({ limit: 200 }),
       ])
     }, 150)
 
@@ -115,6 +118,7 @@ export default function TelaPrincipal({ usuario, aoSair }) {
             {pagina === 'categorias' ? (
               <Categorias aoNavegar={navegar} />
             ) : null}
+            {pagina === 'operacoes' ? <Operacoes /> : null}
             {pagina === 'parceiros' ? <Parceiros /> : null}
             {pagina === 'financeiro' ? (
               <Financeiro key={abaFinanceiro} abaInicial={abaFinanceiro} />

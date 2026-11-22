@@ -1,9 +1,10 @@
-# Testes da API — Autenticação, Categorias, Produtos, Parceiros e Interações
+# Testes da API — Autenticação, Categorias, Produtos, Parceiros, Interações, Financeiro e Operações
 
 Suíte `pytest` baseada no `crm-estoque/docs/plano de testes.pdf` (V1.3),
 cobrindo **autenticação** (LOG/EMP e casos correlatos de BDD, FKN, INTG, COL e
 SEG), **categorias (CAT)**, **produtos (PRD)**, **parceiros (PAR)** e
-**interações (INT)** **títulos financeiros (TIT)**, **baixas financeiras (BAI)** e **caixas (CXA)**. Roda contra o **MySQL real** do
+**interações (INT)**, **títulos financeiros (TIT)**, **baixas financeiras (BAI)**,
+**caixas (CXA)** e **operações (OPE)**. Roda contra o **MySQL real** do
 Docker, sem mock, usando o `test_client` do Flask.
 
 - **83 casos de autenticação** → 83 passando + 3 skips + 1 xfail (LOG-P08 impossível)
@@ -27,14 +28,17 @@ Docker, sem mock, usando o `test_client` do Flask.
   cancelar e dar baixa (forçada de forma determinística)
 - **21 casos de baixas (BAI)** → 21 passando (BAI-P01..P08, BAI-N01..N13), mais SEG-N07 e
   SEG-N08 (baixa em título/caixa de outra empresa), CON-N03 e CON-N04 (concorrência, com a
-  corrida forçada de forma determinística) e a regra desta tela: toda baixa tem parceiro
+  corrida forçada de forma determinística). O parceiro do título é **opcional**
+- **11 extras de operações (OPE)** → criação de venda/compra, estoque automático,
+  títulos em 1x e parcelados, parceiro opcional, edição com estorno/reaplicação,
+  cancelamento, filtros/listagem e baixa de título gerado sem parceiro
 - **4 extras** de fluxo/transação (`test_fluxo_empresa.py`)
 - **3 extras** de performance/dashboard: resumo agregado por empresa
   (`test_dashboard.py`)
 - **1 extra** de configuração: hash padrão do cadastro nunca fica `None`
   (`test_config.py`)
 - Limpeza automática dos dados criados, antes e depois de cada teste
-- Resultado atual da suíte: **362 passed, 4 skipped, 1 xfailed**
+- Resultado atual da suíte: **373 passed, 4 skipped, 1 xfailed**
 
 ---
 
@@ -54,6 +58,7 @@ uv run pytest tests/test_cadastro_empresa.py # só EMP
 uv run pytest tests/test_categorias.py       # só CAT
 uv run pytest tests/test_produtos.py         # só PRD
 uv run pytest tests/test_dashboard.py        # resumo agregado do dashboard
+uv run pytest tests/test_operacoes.py        # só OPE (operações)
 uv run pytest -m banco         # só SQL direto
 uv run pytest -k "LOG-N"       # filtra por ID
 ```
@@ -81,6 +86,7 @@ uv run pytest -k "LOG-N"       # filtra por ID
 | CXA — Caixa | CXA-P01..P13, CXA-N01..N16 (+ CON-N04, SEG) | `test_caixas.py` | 32 + extras |
 | TIT — Títulos financeiros | TIT-P01..P11, TIT-N01..N14 (+ SEG-N06/N09) | `test_titulos.py` | 25 + extras |
 | BAI — Baixas financeiras | BAI-P01..P08, BAI-N01..N13 (+ SEG-N07/N08, CON-N03/N04) | `test_baixas.py` | 21 + extras |
+| OPE — Operações | criação venda/compra, parcelas, estoque, edição, cancelamento e baixa sem parceiro | `test_operacoes.py` | 11 extras |
 | Fluxo/transação (extras, fora do plano) | contexto de empresa, sinal defensivo e rollback atômico | `test_fluxo_empresa.py` | 4 |
 | Dashboard (extras, performance) | `GET /api/dashboard/resumo`: contagens (produtos, categorias, parceiros) + valor em estoque no banco, isolamento por empresa, 401 | `test_dashboard.py` | 3 |
 | Dashboard — Dinheiro (extras) | `dinheiro` = saldo geral (contado + Pix + cartão) do último caixa fechado: nulo sem fechamento, caixa aberto não conta, aparece ao fechar, o mais recente vence, zero é zero, isolamento por empresa, Pix/cartão somam | `test_dashboard_dinheiro.py` | 7 |

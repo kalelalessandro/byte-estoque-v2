@@ -91,10 +91,6 @@ def serializar_titulo(
         motivo_sem_baixa = "Título cancelado."
     elif saldo <= 0:
         motivo_sem_baixa = "Título já quitado."
-    elif parceiro is None:
-        motivo_sem_baixa = (
-            "Título sem parceiro: toda baixa precisa estar ligada a um parceiro."
-        )
 
     return {
         "id_titulo": titulo.id_titulo,
