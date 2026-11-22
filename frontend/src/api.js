@@ -218,10 +218,35 @@ export const api = {
       return requisitar(`/api/baixas?${parametros.toString()}`)
     },
     obter: (idBaixa) => requisitar(`/api/baixas/${idBaixa}`),
-    // Títulos com saldo e parceiro, caixas abertos e formas de pagamento.
+    // Títulos com saldo, caixas abertos e formas de pagamento.
     opcoes: () => requisitar('/api/baixas/opcoes'),
     registrar: (dados) =>
       requisitar('/api/baixas', { method: 'POST', corpo: dados }),
+  },
+
+  operacoes: {
+    // tipo: 'venda' | 'compra'; status: 'concluida' | 'cancelada'
+    listar: ({ busca = '', tipo = '', status = '', limit = 50, offset = 0 } = {}) => {
+      const parametros = new URLSearchParams()
+      if (busca) parametros.set('busca', busca)
+      if (tipo) parametros.set('tipo', tipo)
+      if (status) parametros.set('status', status)
+      parametros.set('limit', String(limit))
+      parametros.set('offset', String(offset))
+      return requisitar(`/api/operacoes?${parametros.toString()}`)
+    },
+    obter: (idOperacao) => requisitar(`/api/operacoes/${idOperacao}`),
+    criar: (dados) =>
+      requisitar('/api/operacoes', { method: 'POST', corpo: dados }),
+    editar: (idOperacao, dados) =>
+      requisitar(`/api/operacoes/${idOperacao}`, {
+        method: 'PATCH',
+        corpo: dados,
+      }),
+    cancelar: (idOperacao) =>
+      requisitar(`/api/operacoes/${idOperacao}/cancelar`, {
+        method: 'POST',
+      }),
   },
 }
 

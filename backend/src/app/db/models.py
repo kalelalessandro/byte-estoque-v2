@@ -132,8 +132,8 @@ class Interacao(Base):
 class TituloFinanceiro(Base):
     """Valor a pagar ou a receber (tabela ``titulos_financeiros``).
 
-    ``id_parceiro`` é opcional no schema (lançamentos sem parceiro existem); a tela de
-    baixas financeiras só liquida títulos COM parceiro. ``tipo`` é controlado pela
+    ``id_parceiro`` é opcional no schema (lançamentos sem parceiro existem) e
+    títulos sem parceiro também podem ser baixados. ``tipo`` é controlado pela
     aplicação: "a pagar" ou "a receber".
     """
 
@@ -200,3 +200,42 @@ class OperacaoCaixa(Base):
     valor: Mapped[Decimal] = mapped_column(Numeric(12, 2))
     ocorrencia: Mapped[datetime] = mapped_column(DateTime)
     descricao: Mapped[str | None] = mapped_column(Text)
+
+
+class Operacao(Base):
+    """Compra ou venda registrada pela empresa (tabela ``operacoes``).
+
+    ``id_parceiro`` é opcional; ``id_usuario`` é o responsável pelo registro.
+    ``status`` é controlado pela aplicação: ``concluida`` ou ``cancelada``.
+    """
+
+    __tablename__ = "operacoes"
+
+    id_operacao: Mapped[int] = mapped_column(primary_key=True)
+    id_parceiro: Mapped[int | None] = mapped_column(
+        ForeignKey("parceiros.id_parceiro")
+    )
+    id_usuario: Mapped[int] = mapped_column(ForeignKey("usuarios.id_usuario"))
+    tipo: Mapped[str] = mapped_column(String(30))
+    status: Mapped[str] = mapped_column(String(30))
+    ocorrencia: Mapped[datetime] = mapped_column(DateTime)
+    observacoes: Mapped[str | None] = mapped_column(Text)
+
+
+class OperacaoItem(Base):
+    """Item de uma operação (tabela ``operacao_itens``).
+
+    PK composta ``(id_operacao, id_produto)``; o banco garante quantidade > 0 e
+    valor unitário >= 0.
+    """
+
+    __tablename__ = "operacao_itens"
+
+    id_operacao: Mapped[int] = mapped_column(
+        ForeignKey("operacoes.id_operacao"), primary_key=True
+    )
+    id_produto: Mapped[int] = mapped_column(
+        ForeignKey("produtos.id_produto"), primary_key=True
+    )
+    quantidade: Mapped[int] = mapped_column(Integer)
+    valor_unitario: Mapped[Decimal] = mapped_column(Numeric(12, 2))

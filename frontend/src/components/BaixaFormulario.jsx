@@ -1,10 +1,7 @@
 /**
  * "Registrar Baixas Manualmente": selecionar título e caixa aberto, informar os dados
- * e salvar. Toda baixa é ligada a um PARCEIRO (o do título): só aparecem títulos com
- * parceiro e saldo pendente. As regras (saldo, título cancelado, caixa aberto, empresa)
- * são validadas pela API; aqui só mostramos cada mensagem junto do campo certo.
- *
- * Ao escolher o título, o Guia mostra as interações do parceiro (contratos, compras...).
+ * e salvar. O parceiro é OPCIONAL: títulos sem parceiro também podem ser baixados.
+ * As regras (saldo, título cancelado, caixa aberto, empresa) são validadas pela API.
  */
 import { useEffect, useState } from 'react'
 import { api, ApiError, mensagemDeErro } from '../api'
@@ -53,7 +50,7 @@ export default function BaixaFormulario({
             setFormulario((atual) => ({ ...atual, id_titulo: String(idTituloInicial) }))
           } else {
             setErroGeral(
-              'Este título não pode receber baixa agora (cancelado, quitado ou sem parceiro).',
+              'Este título não pode receber baixa agora (cancelado ou quitado).',
             )
           }
         }
@@ -128,10 +125,7 @@ export default function BaixaFormulario({
           ) : null}
           {opcoes.titulos.length === 0 ? (
             <Aviso tipo="sucesso">
-              Nenhum título com saldo pendente e parceiro vinculado.
-              {opcoes.titulos_sem_parceiro > 0
-                ? ` ${opcoes.titulos_sem_parceiro} título(s) sem parceiro não podem receber baixa: vincule um parceiro a eles.`
-                : ''}
+              Nenhum título com saldo pendente para receber baixa.
             </Aviso>
           ) : null}
 
@@ -154,8 +148,8 @@ export default function BaixaFormulario({
                     >
                       {itens.map((item) => (
                         <option key={item.id_titulo} value={item.id_titulo}>
-                          {item.parceiro.nome} · {item.descricao} · saldo{' '}
-                          {formatarMoeda(item.saldo_pendente)}
+                          {item.parceiro?.nome || 'Sem parceiro'} · {item.descricao} ·
+                          saldo {formatarMoeda(item.saldo_pendente)}
                         </option>
                       ))}
                     </optgroup>
@@ -171,7 +165,7 @@ export default function BaixaFormulario({
                   {ROTULO_NATUREZA[titulo.natureza] || titulo.tipo}
                 </span>
                 <span>
-                  Parceiro: <strong>{titulo.parceiro.nome}</strong>
+                  Parceiro: <strong>{titulo.parceiro?.nome || 'Sem parceiro'}</strong>
                 </span>
                 <span>Título: {formatarMoeda(titulo.valor)}</span>
                 <span>
@@ -252,7 +246,7 @@ export default function BaixaFormulario({
 
           {erroGeral ? <Aviso>{erroGeral}</Aviso> : null}
 
-          {titulo ? (
+          {titulo?.parceiro ? (
             <GuiaInteracoes
               idParceiro={titulo.parceiro.id_parceiro}
               nomeParceiro={titulo.parceiro.nome}
@@ -260,8 +254,9 @@ export default function BaixaFormulario({
             />
           ) : (
             <p className="guia__ajuda">
-              Selecione um título para ver, no guia, as interações já registradas com o
-              parceiro dele.
+              {titulo
+                ? 'Este título não tem parceiro vinculado; o guia de interações fica indisponível.'
+                : 'Selecione um título para ver, no guia, as interações já registradas com o parceiro dele.'}
             </p>
           )}
 

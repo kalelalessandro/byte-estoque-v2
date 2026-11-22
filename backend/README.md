@@ -88,13 +88,18 @@ o `uv.lock` deve ser versionado no Git.
 | POST | `/api/caixas` | **sim** | Abre um caixa (`valor_abertura`, zero permitido) |
 | POST | `/api/caixas/<id>/movimentos` | **sim** | Registra suprimento ou sangria |
 | POST | `/api/caixas/<id>/fechar` | **sim** | Fecha o caixa com o `valor_contado` e informa a diferença |
+| GET | `/api/operacoes` | **sim** | Lista operações (`busca`, `tipo`, `status`, `limit`, `offset`) com itens e títulos |
+| POST | `/api/operacoes` | **sim** | Registra compra/venda, atualiza estoque e gera títulos (1x ou parcelados) |
+| GET | `/api/operacoes/<id>` | **sim** | Detalhe da operação, itens e títulos gerados |
+| PATCH | `/api/operacoes/<id>` | **sim** | Altera operação concluída, refazendo estoque e títulos atomicamente |
+| POST | `/api/operacoes/<id>/cancelar` | **sim** | Cancela operação, estorna estoque e cancela títulos sem baixas |
 | GET | `/api/titulos` | **sim** | Lista títulos (`busca`, `tipo`, `situacao`, `id_parceiro`, `limit`, `offset`) |
 | GET | `/api/titulos/<id>` | **sim** | Consulta título: saldo, situação, parceiro e histórico de baixas |
 | POST | `/api/titulos` | **sim** | Registra título manualmente (em aberto, sem baixas) |
 | POST | `/api/titulos/<id>/cancelar` | **sim** | Cancela título sem baixas |
 | GET | `/api/baixas` | **sim** | Lista baixas (`busca`, `tipo`, `forma`, `id_parceiro`, `limit`, `offset`) |
 | GET | `/api/baixas/<id>` | **sim** | Consulta baixa + título (com saldo) + parceiro |
-| GET | `/api/baixas/opcoes` | **sim** | Títulos com saldo e parceiro, caixas abertos e formas de pagamento |
+| GET | `/api/baixas/opcoes` | **sim** | Títulos com saldo (parceiro opcional), caixas abertos e formas de pagamento |
 | POST | `/api/baixas` | **sim** | Registra uma baixa em título e caixa aberto |
 
 > Nas rotas de categorias, produtos e parceiros a **empresa vem sempre da
@@ -170,7 +175,7 @@ Baixa = pagamento ou recebimento efetivo de um título (`baixas_financeiras`). R
 - **Toda baixa tem parceiro.** O schema liga a baixa ao parceiro pelo **título**
   (`titulos_financeiros.id_parceiro`, opcional no banco). Por regra desta tela, título
   **sem parceiro** é recusado (422) e não é oferecido no formulário; a resposta de
-  `GET /api/baixas/opcoes` traz `titulos_sem_parceiro` para a tela avisar.
+  `GET /api/baixas/opcoes` traz títulos com saldo, inclusive os sem parceiro.
 - Campos: `id_titulo`, `id_caixa`, `valor` (> 0, até 2 casas; aceita `120,50`),
   `forma_pagamento` (`dinheiro`, `Pix` ou `cartão`, sem diferenciar caixa/acento) e
   `realizado_em` (`AAAA-MM-DD HH:MM`, `AAAA-MM-DDTHH:MM` ou `DD/MM/AAAA HH:MM`).
@@ -367,7 +372,7 @@ uv run pytest tests/test_parceiros.py
 uv run pytest tests/test_interacoes.py
 ```
 
-Resultado esperado: **362 passed, 4 skipped, 1 xfailed** (3 skips de UI/E2E da
+Resultado esperado: **373 passed, 4 skipped, 1 xfailed** (3 skips de UI/E2E da
 autenticação + PRD-N22 de confirmação visual; o xfail é o LOG-P08, impossível
 pelo schema `usuarios.id_empresa NOT NULL`; veja
 [tests/README.md](tests/README.md)).

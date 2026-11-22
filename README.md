@@ -65,14 +65,16 @@ de sessão funciona sem configuração extra de CORS.
    último caixa fechado (saldo geral com Pix e cartão; o card leva ao Financeiro, aba Caixas) e
    valor em estoque.
 3. Use a sidebar para gerenciar **Produtos** (criar, editar, excluir, buscar),
-   **Categorias** (criar, renomear, excluir categorias sem produtos) e
+   **Categorias** (criar, renomear, excluir categorias sem produtos),
+   **Operações** (registrar vendas/compras: o estoque é atualizado e os títulos
+   financeiros são gerados em 1x ou parcelados; parceiro é opcional),
    **Parceiros** (clientes e/ou fornecedores: inserir, acessar, alterar, apagar e
    registrar interações), e **Financeiro**, uma página com três abas: **Títulos**
    (contas a pagar e a receber; ao registrar um título o guia mostra as interações do
    parceiro para preencher descrição e valor), **Baixas** (pagamentos e recebimentos de
-   títulos, sempre ligados a um parceiro e a um caixa aberto) e **Caixas** (abrir, suprimento
-   e sangria, extrato e fechamento com o valor contado). Para baixas, abra antes um caixa na
-   aba Caixas; `database/dev/demo_baixas.sql` cria títulos de exemplo.
+   títulos; o parceiro do título é opcional e o caixa precisa estar aberto) e **Caixas**
+   (abrir, suprimento e sangria, extrato e fechamento com o valor contado). Para baixas,
+   abra antes um caixa na aba Caixas; `database/dev/demo_baixas.sql` cria títulos de exemplo.
 
 ## 4. Testes automatizados
 
@@ -83,7 +85,7 @@ cd backend
 uv run pytest
 ```
 
-Resultado esperado: **362 passed, 4 skipped, 1 xfailed**.
+Resultado esperado: **373 passed, 4 skipped, 1 xfailed**.
 
 > Os testes usam um hash de senha rápido (`PBKDF2`) **somente no ambiente de
 > teste**, para não gastar ~1 s por conta criada. Em produção o hash continua

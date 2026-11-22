@@ -14,6 +14,14 @@ const CAMINHOS = {
       <path d="M12 12v9" />
     </>
   ),
+  operacoes: (
+    <>
+      <path d="M4 7h11" />
+      <path d="m12 4 3 3-3 3" />
+      <path d="M20 17H9" />
+      <path d="m12 14-3 3 3 3" />
+    </>
+  ),
   categorias: (
     <>
       <path d="M20.6 13.4 11 3.8H4v7l9.6 9.6a2 2 0 0 0 2.8 0l4.2-4.2a2 2 0 0 0 0-2.8Z" />
