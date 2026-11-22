@@ -71,18 +71,20 @@ _CONSULTAS_VINCULOS = {
 # ---------------------------------------------------------------------------
 
 
+def tipo_do_parceiro(parceiro: Parceiro) -> str:
+    """"cliente", "fornecedor" ou "ambos" (conveniência; vale os dois booleanos)."""
+    if parceiro.e_cliente and parceiro.e_fornecedor:
+        return "ambos"
+    return "cliente" if parceiro.e_cliente else "fornecedor"
+
+
 def serializar_parceiro(parceiro: Parceiro) -> dict:
     """Parceiro -> dict JSON.
 
     ``tipo`` ("cliente", "fornecedor" ou "ambos") é só conveniência para a tela;
     a fonte de verdade são os dois booleanos.
     """
-    if parceiro.e_cliente and parceiro.e_fornecedor:
-        tipo = "ambos"
-    elif parceiro.e_cliente:
-        tipo = "cliente"
-    else:
-        tipo = "fornecedor"
+    tipo = tipo_do_parceiro(parceiro)
 
     return {
         "id_parceiro": parceiro.id_parceiro,

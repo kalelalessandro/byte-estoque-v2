@@ -127,3 +127,76 @@ class Interacao(Base):
     ocorrencia: Mapped[date] = mapped_column(Date)
     canal: Mapped[str] = mapped_column(String(30))
     descricao: Mapped[str] = mapped_column(Text)
+
+
+class TituloFinanceiro(Base):
+    """Valor a pagar ou a receber (tabela ``titulos_financeiros``).
+
+    ``id_parceiro`` é opcional no schema (lançamentos sem parceiro existem); a tela de
+    baixas financeiras só liquida títulos COM parceiro. ``tipo`` é controlado pela
+    aplicação: "a pagar" ou "a receber".
+    """
+
+    __tablename__ = "titulos_financeiros"
+
+    id_titulo: Mapped[int] = mapped_column(primary_key=True)
+    id_parceiro: Mapped[int | None] = mapped_column(ForeignKey("parceiros.id_parceiro"))
+    id_empresa: Mapped[int] = mapped_column(ForeignKey("empresas.id_empresa"))
+    id_operacao: Mapped[int | None] = mapped_column()
+    tipo: Mapped[str] = mapped_column(String(30))
+    valor: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+    descricao: Mapped[str] = mapped_column(String(500))
+    vencimento: Mapped[date] = mapped_column(Date)
+    cancelado: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class Caixa(Base):
+    """Sessão de caixa (tabela ``caixas``). Aberta enquanto ``fechado_em`` é NULL.
+
+    Não há ``id_empresa``: a empresa da sessão é a de ``aberto_por_usuario``.
+    """
+
+    __tablename__ = "caixas"
+
+    id_caixa: Mapped[int] = mapped_column(primary_key=True)
+    aberto_por_usuario: Mapped[int] = mapped_column(ForeignKey("usuarios.id_usuario"))
+    aberto_em: Mapped[datetime] = mapped_column(DateTime)
+    valor_abertura: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+    fechado_em: Mapped[datetime | None] = mapped_column(DateTime)
+    valor_contado: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
+
+
+class BaixaFinanceira(Base):
+    """Pagamento ou recebimento efetivo de um título (tabela ``baixas_financeiras``).
+
+    Saldo pendente do título = valor do título - soma das baixas. Toda baixa pertence a
+    uma sessão de caixa (``id_caixa`` NOT NULL).
+    """
+
+    __tablename__ = "baixas_financeiras"
+
+    id_baixa: Mapped[int] = mapped_column(primary_key=True)
+    id_titulo: Mapped[int] = mapped_column(ForeignKey("titulos_financeiros.id_titulo"))
+    id_caixa: Mapped[int] = mapped_column(ForeignKey("caixas.id_caixa"))
+    valor: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+    realizado_em: Mapped[datetime] = mapped_column(DateTime)
+    forma_pagamento: Mapped[str] = mapped_column(String(30))
+
+
+class OperacaoCaixa(Base):
+    """Movimento adicional de caixa: suprimento (entrada) ou sangria (saída).
+
+    Tabela ``operacoes_caixa``. Pagamentos e recebimentos de títulos NÃO entram aqui:
+    ficam em ``baixas_financeiras`` (o mesmo evento não pode estar nas duas tabelas).
+    ``tipo`` é controlado pela aplicação: "suprimento" ou "sangria".
+    """
+
+    __tablename__ = "operacoes_caixa"
+
+    movimento_id: Mapped[int] = mapped_column(primary_key=True)
+    id_caixa: Mapped[int] = mapped_column(ForeignKey("caixas.id_caixa"))
+    id_usuario: Mapped[int] = mapped_column(ForeignKey("usuarios.id_usuario"))
+    tipo: Mapped[str] = mapped_column(String(30))
+    valor: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+    ocorrencia: Mapped[datetime] = mapped_column(DateTime)
+    descricao: Mapped[str | None] = mapped_column(Text)

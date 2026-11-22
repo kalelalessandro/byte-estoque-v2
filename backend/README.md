@@ -81,10 +81,101 @@ o `uv.lock` deve ser versionado no Git.
 | DELETE | `/api/parceiros/<id>` | **sim** | Apaga parceiro (409 se houver interações, operações ou títulos) |
 | POST | `/api/parceiros/<id>/interacoes` | **sim** | Registra uma interação (o responsável é o usuário logado) |
 | PATCH | `/api/parceiros/<id>/interacoes/<interacao_id>` | **sim** | Altera data, canal e/ou descrição da interação |
+| GET | `/api/interacoes` | **sim** | Guia: interações de todos os parceiros (`id_parceiro`, `limit`, `offset`) |
+| GET | `/api/caixas` | **sim** | Histórico de caixas da empresa (`situacao`, `limit`, `offset`) com valores |
+| GET | `/api/caixas/atual` | **sim** | Caixa aberto agora (ou `null`), com valores e extrato |
+| GET | `/api/caixas/<id>` | **sim** | Sessão de caixa com valores e extrato |
+| POST | `/api/caixas` | **sim** | Abre um caixa (`valor_abertura`, zero permitido) |
+| POST | `/api/caixas/<id>/movimentos` | **sim** | Registra suprimento ou sangria |
+| POST | `/api/caixas/<id>/fechar` | **sim** | Fecha o caixa com o `valor_contado` e informa a diferença |
+| GET | `/api/titulos` | **sim** | Lista títulos (`busca`, `tipo`, `situacao`, `id_parceiro`, `limit`, `offset`) |
+| GET | `/api/titulos/<id>` | **sim** | Consulta título: saldo, situação, parceiro e histórico de baixas |
+| POST | `/api/titulos` | **sim** | Registra título manualmente (em aberto, sem baixas) |
+| POST | `/api/titulos/<id>/cancelar` | **sim** | Cancela título sem baixas |
+| GET | `/api/baixas` | **sim** | Lista baixas (`busca`, `tipo`, `forma`, `id_parceiro`, `limit`, `offset`) |
+| GET | `/api/baixas/<id>` | **sim** | Consulta baixa + título (com saldo) + parceiro |
+| GET | `/api/baixas/opcoes` | **sim** | Títulos com saldo e parceiro, caixas abertos e formas de pagamento |
+| POST | `/api/baixas` | **sim** | Registra uma baixa em título e caixa aberto |
 
 > Nas rotas de categorias, produtos e parceiros a **empresa vem sempre da
 > sessão**; o `id_empresa` enviado no JSON é recusado. Categoria e SKU são únicos
 > por empresa, e a categoria do produto precisa ser da mesma empresa.
+
+### Caixas
+
+Sessão de caixa (`caixas`) com movimentos adicionais (`operacoes_caixa`). Regras
+(Documentação do Banco v1.2 e plano de testes CXA/CON/SEG):
+
+- A empresa do caixa é a de quem o abriu (`aberto_por_usuario`); a tabela não tem
+  `id_empresa`. Caixa de outra empresa responde 404. **Um caixa aberto por empresa**
+  (409 ao tentar abrir outro); aberturas simultâneas são serializadas travando a linha da
+  empresa.
+- `valor_abertura` e `valor_contado` aceitam **zero**, não negativos. Suprimento e sangria
+  exigem valor > 0; `tipo` é `suprimento` (entrada) ou `sangria` (saída). Datas e horas são
+  do servidor, nunca do JSON.
+- **Saldo esperado em dinheiro** = abertura + suprimentos − sangrias + recebimentos em
+  dinheiro − pagamentos em dinheiro (as baixas vêm de `baixas_financeiras`). **Pix e cartão
+  não alteram o dinheiro**: aparecem em linhas separadas (`por_forma`). Nada é contado em
+  dobro (baixas e movimentos ficam em tabelas diferentes).
+- Fechamento: `diferenca` = contado − esperado (negativa = faltou dinheiro). Caixa fechado
+  não aceita lançamentos, novas baixas nem novo fechamento (409; data/hora e valor contado
+  originais são mantidos).
+- **Concorrência:** movimento e fechamento travam o caixa (`SELECT ... FOR UPDATE`); o
+  fechamento soma baixas e movimentos com leitura travada (uma leitura comum veria o snapshot
+  antigo da transação). Assim uma baixa concorrente entra no esperado ou é recusada, e o
+  fechamento devolve exatamente o resumo calculado sob trava. Ordem de travas do sistema:
+  empresa → título → caixa.
+- `GET /api/caixas/<id>` traz o `extrato`: baixas (com parceiro) e suprimentos/sangrias.
+
+### Títulos financeiros
+
+Título = conta a pagar ou a receber (`titulos_financeiros`). Regras (Documentação do Banco
+v1.2 e plano de testes TIT/SEG):
+
+- Campos: `tipo` (`a pagar` ou `a receber`), `valor` (> 0, até 9.999.999.999,99, 2 casas;
+  aceita `1250,00`), `descricao` (até 500) e `vencimento` (`AAAA-MM-DD` ou `DD/MM/AAAA`, data
+  real) obrigatórios; `id_parceiro` e `id_operacao` opcionais. `id_empresa` é recusado: a
+  empresa vem da sessão.
+- O parceiro precisa ser da mesma empresa. A operação também; se ela tem parceiro, o título
+  deve ter o **mesmo** parceiro (se o título não informar, herda o da operação).
+- Título sem parceiro é permitido no cadastro, mas **não aceita baixa** (toda baixa tem
+  parceiro); a resposta traz `pode_baixar` e `motivo_sem_baixa` para a tela explicar.
+- Situação: `aberto`, `parcial`, `quitado` ou `cancelado`; `saldo_pendente` = valor − baixas.
+- `GET /api/titulos/<id>` inclui `baixas` (histórico, mais recentes primeiro).
+- Cancelar: bloqueado (409) com baixas ou se já cancelado; o cancelamento trava o título
+  (`FOR UPDATE`) antes de contar as baixas, igual à baixa, então os dois não se atropelam.
+  Título cancelado não aceita baixas. Não há exclusão (FK `RESTRICT`) nem edição dos dados
+  (W.I.P. no fluxograma).
+- **Vínculo com a interação do parceiro:** o schema não tem coluna ligando título a interação.
+  Na tela, ao escolher o parceiro o Guia mostra as interações dele (a descrição costuma trazer
+  valor e detalhes); o usuário pode "Usar na descrição" (a descrição do título passa a citar
+  `Interação #id`) e "Usar R$ …" (valor sugerido a partir do texto) e confere antes de salvar.
+
+### Baixas financeiras
+
+Baixa = pagamento ou recebimento efetivo de um título (`baixas_financeiras`). Regras
+(Documentação do Banco v1.2 e plano de testes BAI/SEG/CON):
+
+- **Toda baixa tem parceiro.** O schema liga a baixa ao parceiro pelo **título**
+  (`titulos_financeiros.id_parceiro`, opcional no banco). Por regra desta tela, título
+  **sem parceiro** é recusado (422) e não é oferecido no formulário; a resposta de
+  `GET /api/baixas/opcoes` traz `titulos_sem_parceiro` para a tela avisar.
+- Campos: `id_titulo`, `id_caixa`, `valor` (> 0, até 2 casas; aceita `120,50`),
+  `forma_pagamento` (`dinheiro`, `Pix` ou `cartão`, sem diferenciar caixa/acento) e
+  `realizado_em` (`AAAA-MM-DD HH:MM`, `AAAA-MM-DDTHH:MM` ou `DD/MM/AAAA HH:MM`).
+- Saldo pendente = valor do título − soma das baixas. Recusadas: valor acima do saldo
+  (422), título cancelado ou já quitado (409), caixa fechado (409) e **sem caixa aberto
+  na empresa** (409, "Abra um caixa"). Título, caixa e parceiro precisam ser da empresa
+  do usuário (a empresa do caixa é a de quem o abriu).
+- **Concorrência:** a baixa trava o título e depois o caixa (`SELECT ... FOR UPDATE`,
+  nessa ordem) e soma as baixas com leitura travada. Duas baixas simultâneas não passam
+  do saldo e nenhuma baixa entra num caixa que está sendo fechado.
+- Não há edição nem exclusão de baixa (o schema não tem estorno).
+- Títulos e caixas têm tela própria (na página Financeiro). Para experimentar baixas abra um
+  caixa na aba Caixas; `database/dev/demo_baixas.sql` só cria títulos de exemplo.
+- **Guia de interações:** `GET /api/interacoes` lista as interações (contratos e compras)
+  de todos os parceiros da empresa, ou só de um (`id_parceiro`). A tela de baixas usa isso
+  como guia ao lado da lista e ao escolher o título.
 
 ### Parceiros e interações
 
@@ -251,12 +342,21 @@ uv run pytest -m banco
 uv run pytest tests/test_categorias.py
 uv run pytest tests/test_produtos.py
 
+# Só caixas (CXA/CON)
+uv run pytest tests/test_caixas.py
+
+# Só títulos financeiros (TIT/SEG)
+uv run pytest tests/test_titulos.py
+
+# Só baixas financeiras (BAI/SEG/CON)
+uv run pytest tests/test_baixas.py
+
 # Só parceiros (PAR) / só interações (INT)
 uv run pytest tests/test_parceiros.py
 uv run pytest tests/test_interacoes.py
 ```
 
-Resultado esperado: **235 passed, 4 skipped, 1 xfailed** (3 skips de UI/E2E da
+Resultado esperado: **352 passed, 4 skipped, 1 xfailed** (3 skips de UI/E2E da
 autenticação + PRD-N22 de confirmação visual; o xfail é o LOG-P08, impossível
 pelo schema `usuarios.id_empresa NOT NULL`; veja
 [tests/README.md](tests/README.md)).
@@ -310,8 +410,14 @@ backend/
 │   ├── modules/
 │   │   ├── partners.py       # parceiros: criar, listar, acessar, alterar, apagar
 │   │   ├── partners_rules.py # validação/normalização dos campos de parceiro
-│   │   ├── interactions.py   # interações: registrar e alterar
-│   │   └── interactions_rules.py  # validação dos campos de interação
+│   │   ├── interactions.py   # interações: registrar, alterar e guia (GET /api/interacoes)
+│   │   ├── interactions_rules.py  # validação dos campos de interação
+│   │   ├── baixas.py         # baixas financeiras: listar, consultar, opções e registrar
+│   │   ├── baixas_rules.py   # validação dos campos da baixa
+│   │   ├── titulos.py        # títulos: listar, consultar, registrar e cancelar
+│   │   ├── titulos_rules.py  # validação dos campos do título
+│   │   ├── caixas.py         # caixas: abrir, movimentos, extrato, fechar
+│   │   └── caixas_rules.py   # validação dos campos do caixa
 │   ├── core/
 │   │   ├── login.py          # POST /login, POST /logout, GET /me
 │   │   ├── signup.py         # POST /cadastro (empresa + usuário)
@@ -327,6 +433,10 @@ backend/
     ├── test_parceiros.py     # PAR-Pxx / PAR-Nxx + isolamento, busca, filtros
     ├── test_interacoes.py    # INT-Pxx / INT-Nxx + isolamento entre empresas
     ├── apoio_parceiros.py    # login, payloads e limpeza de PAR/INT
+    ├── test_baixas.py        # BAI-Pxx / BAI-Nxx + SEG-N07/N08 + CON-N03/N04 + regra do parceiro
+    ├── apoio_baixas.py       # títulos, caixas, operações, baixas e limpeza (BAI/TIT)
+    ├── test_titulos.py       # TIT-Pxx / TIT-Nxx + SEG-N06/N09 + cancelar x baixar (concorrência)
+    ├── test_caixas.py        # CXA-Pxx / CXA-Nxx + CON-N04 + abrir/fechar/lançar (concorrência)
     ├── test_fluxo_empresa.py # transação atômica + contexto de empresa
     └── test_integridade_banco_auth.py  # BDD/FKN/INTG de autenticação
 ```

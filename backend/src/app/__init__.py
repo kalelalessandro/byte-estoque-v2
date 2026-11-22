@@ -22,10 +22,14 @@ from .core.login import bp as bp_login
 from .core.signup import bp as bp_signup
 from .db import get_engine, init_db
 from .modules.categories import bp as bp_categorias
+from .modules.baixas import bp as bp_baixas
+from .modules.caixas import bp as bp_caixas
 from .modules.dashboard import bp as bp_dashboard
 from .modules.interactions import bp as bp_interacoes
+from .modules.interactions import bp_guia as bp_guia_interacoes
 from .modules.partners import bp as bp_parceiros
 from .modules.products import bp as bp_produtos
+from .modules.titulos import bp as bp_titulos
 
 # app/__init__.py -> app -> src -> backend -> raiz do projeto
 RAIZ_PROJETO = Path(__file__).resolve().parents[3]
@@ -122,6 +126,10 @@ def registrar_blueprints(app: Flask) -> None:
     app.register_blueprint(bp_parceiros, url_prefix="/api/parceiros")
     # Interações moram sob /api/parceiros/<id>/interacoes (mesma tela de parceiros).
     app.register_blueprint(bp_interacoes, url_prefix="/api/parceiros")
+    app.register_blueprint(bp_guia_interacoes, url_prefix="/api/interacoes")
+    app.register_blueprint(bp_baixas, url_prefix="/api/baixas")
+    app.register_blueprint(bp_titulos, url_prefix="/api/titulos")
+    app.register_blueprint(bp_caixas, url_prefix="/api/caixas")
 
 
 def registrar_rotas_basicas(app: Flask) -> None:
@@ -152,8 +160,21 @@ def registrar_rotas_basicas(app: Flask) -> None:
                         "GET/PATCH/DELETE /api/parceiros/<id>"
                     ),
                     "interacoes": (
+                        "GET /api/interacoes, "
                         "POST /api/parceiros/<id>/interacoes, "
                         "PATCH /api/parceiros/<id>/interacoes/<interacao_id>"
+                    ),
+                    "baixas": (
+                        "GET/POST /api/baixas, GET /api/baixas/opcoes, "
+                        "GET /api/baixas/<id>"
+                    ),
+                    "titulos": (
+                        "GET/POST /api/titulos, GET /api/titulos/<id>, "
+                        "POST /api/titulos/<id>/cancelar"
+                    ),
+                    "caixas": (
+                        "GET/POST /api/caixas, GET /api/caixas/atual, GET /api/caixas/<id>, "
+                        "POST /api/caixas/<id>/movimentos, POST /api/caixas/<id>/fechar"
                     ),
                 },
             }

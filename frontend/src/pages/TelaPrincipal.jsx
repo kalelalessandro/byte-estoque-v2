@@ -5,6 +5,7 @@ import Icone from '../components/Icone'
 import Sidebar from '../components/Sidebar'
 import Tela from '../components/Tela'
 import Categorias from './Categorias'
+import Financeiro from './Financeiro'
 import Inicio from './Inicio'
 import Parceiros from './Parceiros'
 import Produtos from './Produtos'
@@ -14,6 +15,7 @@ const TITULOS = {
   produtos: 'Produtos',
   categorias: 'Categorias',
   parceiros: 'Parceiros',
+  financeiro: 'Financeiro',
 }
 
 function iniciais(nome = '') {
@@ -110,6 +112,7 @@ export default function TelaPrincipal({ usuario, aoSair }) {
               <Categorias aoNavegar={navegar} />
             ) : null}
             {pagina === 'parceiros' ? <Parceiros /> : null}
+            {pagina === 'financeiro' ? <Financeiro /> : null}
           </main>
         </div>
       </div>

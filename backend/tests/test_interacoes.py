@@ -345,3 +345,59 @@ def test_alterar_interacao_inexistente_responde_404(client):
     resposta = client.patch(_rota(parceiro["id_parceiro"], 999999), json={"canal": "x"})
 
     assert resposta.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# GET /api/interacoes: o "guia" da tela de baixas financeiras
+# ---------------------------------------------------------------------------
+
+
+def test_guia_lista_interacoes_de_todos_os_parceiros_da_empresa(client):
+    logar(client)
+    cliente = criar_parceiro(client, nome="Cliente Guia")
+    fornecedor = criar_parceiro(client, nome="Fornecedor Guia", e_cliente=False, e_fornecedor=True)
+    _registrar(client, cliente["id_parceiro"], ocorrencia="2026-11-01", canal="Compra",
+               descricao="Compra de 10 caixas")
+    _registrar(client, fornecedor["id_parceiro"], ocorrencia="2026-11-05", canal="Contrato",
+               descricao="Contrato de fornecimento assinado")
+
+    dados = client.get("/api/interacoes").get_json()["dados"]
+
+    assert dados["total"] == 2
+    assert [(i["parceiro_nome"], i["parceiro_tipo"], i["canal"]) for i in dados["interacoes"]] == [
+        ("Fornecedor Guia", "fornecedor", "Contrato"),  # mais recente primeiro
+        ("Cliente Guia", "cliente", "Compra"),
+    ]
+    assert dados["interacoes"][0]["usuario_nome"]
+
+
+def test_guia_filtra_por_parceiro_e_pagina(client):
+    logar(client)
+    a = criar_parceiro(client, nome="Parceiro A")
+    b = criar_parceiro(client, nome="Parceiro B")
+    for dia in ("2026-11-01", "2026-11-02", "2026-11-03"):
+        _registrar(client, a["id_parceiro"], ocorrencia=dia)
+    _registrar(client, b["id_parceiro"])
+
+    so_a = client.get("/api/interacoes", query_string={"id_parceiro": a["id_parceiro"]})
+    pagina = client.get("/api/interacoes?limit=2&offset=1").get_json()["dados"]
+
+    assert so_a.get_json()["dados"]["total"] == 3
+    assert {i["parceiro_nome"] for i in so_a.get_json()["dados"]["interacoes"]} == {"Parceiro A"}
+    assert pagina["total"] == 4 and len(pagina["interacoes"]) == 2
+    assert client.get("/api/interacoes?limit=0").status_code == 422
+    assert client.get("/api/interacoes?id_parceiro=abc").status_code == 422
+
+
+def test_guia_nao_mostra_interacoes_de_outra_empresa(app, client):
+    logar(client)
+    parceiro_a = criar_parceiro(client, nome="Parceiro da Empresa A")
+    _registrar(client, parceiro_a["id_parceiro"])
+
+    outro = app.test_client()
+    logar(outro, EMAIL_B, CNPJ_VALIDO_2)
+
+    assert outro.get("/api/interacoes").get_json()["dados"]["total"] == 0
+    # Nem filtrando pelo id do parceiro da empresa A.
+    resposta = outro.get("/api/interacoes", query_string={"id_parceiro": parceiro_a["id_parceiro"]})
+    assert resposta.get_json()["dados"]["total"] == 0
