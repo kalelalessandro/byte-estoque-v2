@@ -146,6 +146,14 @@ export const api = {
   },
 
   interacoes: {
+    // Guia: interações (contratos e compras) de todos os parceiros, ou só de um.
+    listar: ({ id_parceiro = 0, limit = 20, offset = 0 } = {}) => {
+      const parametros = new URLSearchParams()
+      if (id_parceiro) parametros.set('id_parceiro', String(id_parceiro))
+      parametros.set('limit', String(limit))
+      parametros.set('offset', String(offset))
+      return requisitar(`/api/interacoes?${parametros.toString()}`)
+    },
     registrar: (idParceiro, dados) =>
       requisitar(`/api/parceiros/${idParceiro}/interacoes`, {
         method: 'POST',
@@ -156,6 +164,64 @@ export const api = {
         method: 'PATCH',
         corpo: dados,
       }),
+  },
+
+  caixas: {
+    // situacao: 'aberto' | 'fechado'
+    listar: ({ situacao = '', limit = 50, offset = 0 } = {}) => {
+      const parametros = new URLSearchParams()
+      if (situacao) parametros.set('situacao', situacao)
+      parametros.set('limit', String(limit))
+      parametros.set('offset', String(offset))
+      return requisitar(`/api/caixas?${parametros.toString()}`)
+    },
+    // O caixa aberto agora, com valores e extrato: { dados: { caixa: {...} | null } }.
+    atual: () => requisitar('/api/caixas/atual'),
+    obter: (idCaixa) => requisitar(`/api/caixas/${idCaixa}`),
+    abrir: (dados) => requisitar('/api/caixas', { method: 'POST', corpo: dados }),
+    // Suprimento ou sangria: { tipo, valor, descricao }.
+    movimentar: (idCaixa, dados) =>
+      requisitar(`/api/caixas/${idCaixa}/movimentos`, { method: 'POST', corpo: dados }),
+    fechar: (idCaixa, dados) =>
+      requisitar(`/api/caixas/${idCaixa}/fechar`, { method: 'POST', corpo: dados }),
+  },
+
+  titulos: {
+    // tipo: 'pagar' | 'receber'; situacao: 'aberto' | 'parcial' | 'quitado' | 'cancelado'
+    listar: ({ busca = '', tipo = '', situacao = '', id_parceiro = 0, limit = 50, offset = 0 } = {}) => {
+      const parametros = new URLSearchParams()
+      if (busca) parametros.set('busca', busca)
+      if (tipo) parametros.set('tipo', tipo)
+      if (situacao) parametros.set('situacao', situacao)
+      if (id_parceiro) parametros.set('id_parceiro', String(id_parceiro))
+      parametros.set('limit', String(limit))
+      parametros.set('offset', String(offset))
+      return requisitar(`/api/titulos?${parametros.toString()}`)
+    },
+    // Dados do título + saldo + histórico de baixas.
+    obter: (idTitulo) => requisitar(`/api/titulos/${idTitulo}`),
+    criar: (dados) =>
+      requisitar('/api/titulos', { method: 'POST', corpo: dados }),
+    cancelar: (idTitulo) =>
+      requisitar(`/api/titulos/${idTitulo}/cancelar`, { method: 'POST' }),
+  },
+
+  baixas: {
+    // tipo: 'recebimento' | 'pagamento'; forma: 'dinheiro' | 'pix' | 'cartao'
+    listar: ({ busca = '', tipo = '', forma = '', limit = 50, offset = 0 } = {}) => {
+      const parametros = new URLSearchParams()
+      if (busca) parametros.set('busca', busca)
+      if (tipo) parametros.set('tipo', tipo)
+      if (forma) parametros.set('forma', forma)
+      parametros.set('limit', String(limit))
+      parametros.set('offset', String(offset))
+      return requisitar(`/api/baixas?${parametros.toString()}`)
+    },
+    obter: (idBaixa) => requisitar(`/api/baixas/${idBaixa}`),
+    // Títulos com saldo e parceiro, caixas abertos e formas de pagamento.
+    opcoes: () => requisitar('/api/baixas/opcoes'),
+    registrar: (dados) =>
+      requisitar('/api/baixas', { method: 'POST', corpo: dados }),
   },
 }
 

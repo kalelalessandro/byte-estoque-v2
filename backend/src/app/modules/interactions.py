@@ -24,8 +24,8 @@ Regras (Documentação do Banco v1.2, tabela ``interacoes``):
 
 from __future__ import annotations
 
-from flask import Blueprint, g
-from sqlalchemy import select
+from flask import Blueprint, g, request
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 
 from ..core.auth_utils import (
@@ -35,15 +35,83 @@ from ..core.auth_utils import (
     resposta_ok,
 )
 from ..db import get_db
-from ..db.models import Interacao, Usuario
+from ..db.models import Interacao, Parceiro, Usuario
 from .interactions_rules import validar_criacao, validar_edicao
 from .partners import (
     buscar_parceiro_da_empresa,
     parceiro_nao_encontrado,
     serializar_interacao,
+    tipo_do_parceiro,
 )
 
 bp = Blueprint("interactions", __name__)
+# Listagem geral (GUIA da tela de baixas financeiras): /api/interacoes.
+bp_guia = Blueprint("interactions_guide", __name__)
+
+LIMITE_GUIA_PADRAO = 20
+LIMITE_GUIA_MAXIMO = 100
+
+
+@bp_guia.get("")
+@login_obrigatorio
+def listar_interacoes():
+    """Interações de TODOS os parceiros da empresa, mais recentes primeiro.
+
+    Alimenta o "guia" da tela de baixas financeiras: o que foi combinado, comprado,
+    reembolsado ou pago com cada parceiro. Parâmetros opcionais: ``id_parceiro``
+    (só desse parceiro), ``limit`` (padrão 20, máximo 100) e ``offset``.
+    """
+    def numero(nome, padrao, minimo, maximo):
+        bruto = request.args.get(nome)
+        if bruto is None or bruto == "":
+            return padrao, None
+        try:
+            valor = int(bruto)
+        except ValueError:
+            return None, f"'{nome}' deve ser um número inteiro."
+        if valor < minimo or valor > maximo:
+            return None, f"'{nome}' deve estar entre {minimo} e {maximo}."
+        return valor, None
+
+    limit, msg = numero("limit", LIMITE_GUIA_PADRAO, 1, LIMITE_GUIA_MAXIMO)
+    if msg:
+        return resposta_erro(msg, 422)
+    offset, msg = numero("offset", 0, 0, 2_147_483_647)
+    if msg:
+        return resposta_erro(msg, 422)
+    id_parceiro, msg = numero("id_parceiro", 0, 0, 2_147_483_647)
+    if msg:
+        return resposta_erro(msg, 422)
+
+    # A empresa vem do PARCEIRO da interação (a tabela não tem id_empresa).
+    filtros = [Parceiro.id_empresa == g.usuario.id_empresa]
+    if id_parceiro:
+        filtros.append(Interacao.id_parceiro == id_parceiro)
+
+    base = (
+        select(Interacao, Parceiro, Usuario.nome)
+        .join(Parceiro, Parceiro.id_parceiro == Interacao.id_parceiro)
+        .join(Usuario, Usuario.id_usuario == Interacao.id_usuario)
+        .where(*filtros)
+    )
+    db = get_db()
+    total = db.scalar(select(func.count()).select_from(base.subquery()))
+    linhas = db.execute(
+        base.order_by(Interacao.ocorrencia.desc(), Interacao.interacao_id.desc())
+        .limit(limit)
+        .offset(offset)
+    ).all()
+
+    itens = []
+    for interacao, parceiro, usuario_nome in linhas:
+        item = serializar_interacao(interacao, usuario_nome)
+        item["parceiro_nome"] = parceiro.nome
+        item["parceiro_tipo"] = tipo_do_parceiro(parceiro)
+        itens.append(item)
+
+    return resposta_ok(
+        {"interacoes": itens, "total": total, "limit": limit, "offset": offset}
+    )
 
 
 @bp.post("/<int:id_parceiro>/interacoes")

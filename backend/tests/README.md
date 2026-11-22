@@ -3,7 +3,7 @@
 Suíte `pytest` baseada no `crm-estoque/docs/plano de testes.pdf` (V1.3),
 cobrindo **autenticação** (LOG/EMP e casos correlatos de BDD, FKN, INTG, COL e
 SEG), **categorias (CAT)**, **produtos (PRD)**, **parceiros (PAR)** e
-**interações (INT)**. Roda contra o **MySQL real** do
+**interações (INT)** **títulos financeiros (TIT)**, **baixas financeiras (BAI)** e **caixas (CXA)**. Roda contra o **MySQL real** do
 Docker, sem mock, usando o `test_client` do Flask.
 
 - **83 casos de autenticação** → 83 passando + 3 skips + 1 xfail (LOG-P08 impossível)
@@ -18,13 +18,23 @@ Docker, sem mock, usando o `test_client` do Flask.
 - **14 casos de interações (INT)** → 14 passando (INT-P01..P07, INT-N01..N07), mais
   extras de data, responsável, isolamento entre empresas e os tipos de negócio
   (compra, reembolso, contrato, pagamento)
+- **29 casos de caixa (CXA)** → 29 passando (CXA-P01..P13, CXA-N01..N16; CXA-N11 é coberto
+  pela API como "sem caixa aberto" e a tela bloqueia), mais CON-N04 (fechamento x baixa),
+  um caixa aberto por empresa, extrato, histórico, isolamento entre empresas e as corridas
+  abrir/fechar/lançar (forçadas de forma determinística)
+- **25 casos de títulos (TIT)** → 25 passando (TIT-P01..P11, TIT-N01..N14), mais SEG-N06 e
+  SEG-N09, vínculo com operação (parceiro herdado/divergente), filtros e a corrida entre
+  cancelar e dar baixa (forçada de forma determinística)
+- **21 casos de baixas (BAI)** → 21 passando (BAI-P01..P08, BAI-N01..N13), mais SEG-N07 e
+  SEG-N08 (baixa em título/caixa de outra empresa), CON-N03 e CON-N04 (concorrência, com a
+  corrida forçada de forma determinística) e a regra desta tela: toda baixa tem parceiro
 - **4 extras** de fluxo/transação (`test_fluxo_empresa.py`)
 - **3 extras** de performance/dashboard: resumo agregado por empresa
   (`test_dashboard.py`)
 - **1 extra** de configuração: hash padrão do cadastro nunca fica `None`
   (`test_config.py`)
 - Limpeza automática dos dados criados, antes e depois de cada teste
-- Resultado atual da suíte: **235 passed, 4 skipped, 1 xfailed**
+- Resultado atual da suíte: **362 passed, 4 skipped, 1 xfailed**
 
 ---
 
@@ -68,8 +78,12 @@ uv run pytest -k "LOG-N"       # filtra por ID
 | PRD — Produtos | PRD-P01..P13, PRD-N01..N22 | `test_produtos.py` | 35 (34 + 1 skip) + extras |
 | PAR — Parceiros | PAR-P01..P14, PAR-N01..N21 | `test_parceiros.py` | 35 + extras |
 | INT — Interações | INT-P01..P07, INT-N01..N07 | `test_interacoes.py` | 14 + extras |
+| CXA — Caixa | CXA-P01..P13, CXA-N01..N16 (+ CON-N04, SEG) | `test_caixas.py` | 32 + extras |
+| TIT — Títulos financeiros | TIT-P01..P11, TIT-N01..N14 (+ SEG-N06/N09) | `test_titulos.py` | 25 + extras |
+| BAI — Baixas financeiras | BAI-P01..P08, BAI-N01..N13 (+ SEG-N07/N08, CON-N03/N04) | `test_baixas.py` | 21 + extras |
 | Fluxo/transação (extras, fora do plano) | contexto de empresa, sinal defensivo e rollback atômico | `test_fluxo_empresa.py` | 4 |
 | Dashboard (extras, performance) | `GET /api/dashboard/resumo`: contagens (produtos, categorias, parceiros) + valor em estoque no banco, isolamento por empresa, 401 | `test_dashboard.py` | 3 |
+| Dashboard — Dinheiro (extras) | `dinheiro` = saldo geral (contado + Pix + cartão) do último caixa fechado: nulo sem fechamento, caixa aberto não conta, aparece ao fechar, o mais recente vence, zero é zero, isolamento por empresa, Pix/cartão somam | `test_dashboard_dinheiro.py` | 7 |
 | Configuração (extra, regressão) | hash de senha padrão do cadastro é válido (nunca `None`) | `test_config.py` | 1 |
 
 Os IDs dos casos aparecem no nome de cada teste (ex.:
@@ -144,6 +158,17 @@ requisição, mantendo o resultado esperado de cada caso:
   (texto livre, até 30). Os casos INT do plano usam "telefone"/"WhatsApp" apenas
   como exemplos de texto; o texto desses casos no PDF ainda descreve "contato" e
   precisa ser atualizado na documentação. O schema não mudou.
+- `test_baixas.py` cria títulos e caixas por SQL (esses módulos ainda não têm API) via
+  `tests/apoio_baixas.py`. BAI-P06 ("pela opção do Financeiro") usa a mesma rota
+  `POST /api/baixas`. CON-N03/N04 seguram a trava da linha em uma segunda sessão do banco
+  enquanto a requisição espera, e só então confirmam a mudança concorrente.
+- `test_caixas.py` cria títulos e baixas por SQL e abre/fecha caixas pela API. CON-N04 confere
+  que o valor devolvido pelo fechamento já inclui a baixa confirmada durante a espera (sem a
+  leitura travada, a diferença sairia errada).
+- `test_titulos.py` cria operações, caixas e baixas por SQL (sem API ainda). TIT-P04 (título
+  sem parceiro) é válido no cadastro; o título só não recebe baixa na tela de baixas.
+- **Regra do parceiro:** o plano permite título sem parceiro, mas a tela de baixas só
+  liquida títulos com parceiro (decisão de produto); isso é coberto por testes extras.
 - O app de teste usa PBKDF2 com poucas iterações via `SENHA_HASH_METODO` para
   acelerar a suíte; em produção o cadastro continua usando `scrypt`.
 - Os dados criados via API são registrados em `tests/helpers.py`
