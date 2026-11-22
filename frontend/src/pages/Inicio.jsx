@@ -1,8 +1,14 @@
-/** Dashboard inicial do sistema autenticado. */
+/**
+ * Dashboard inicial do sistema autenticado.
+ *
+ * O card "Dinheiro" vem do Caixa: mostra o valor contado no último caixa fechado (aparece
+ * assim que o caixa fecha) e leva ao Financeiro, na aba Caixas.
+ */
 import { useEffect, useState } from 'react'
 import { api, mensagemDeErro } from '../api'
 import Aviso from '../components/Aviso'
 import Icone from '../components/Icone'
+import { formatarDataHora } from '../formatos'
 
 const MOEDA = new Intl.NumberFormat('pt-BR', {
   style: 'currency',
@@ -14,6 +20,7 @@ const RESUMO_VAZIO = {
   categorias: 0,
   parceiros: 0,
   valor_estoque: '0.00',
+  dinheiro: null, // { valor, id_caixa, fechado_em } do último caixa fechado
 }
 
 export default function Inicio({ usuario, aoNavegar }) {
@@ -67,10 +74,14 @@ export default function Inicio({ usuario, aoNavegar }) {
     {
       id: 'dinheiro',
       rotulo: 'Dinheiro',
-      valor: '—',
-      detalhe: 'Em breve',
+      valor: estado.dados.dinheiro
+        ? MOEDA.format(Number(estado.dados.dinheiro.valor))
+        : '—',
+      detalhe: estado.dados.dinheiro
+        ? `contado no caixa #${estado.dados.dinheiro.id_caixa} · ${formatarDataHora(estado.dados.dinheiro.fechado_em)}`
+        : 'nenhum caixa fechado ainda',
       icone: 'dinheiro',
-      indisponivel: true,
+      acao: () => aoNavegar('financeiro', { aba: 'caixas' }),
     },
     {
       id: 'parceiros',
@@ -160,8 +171,9 @@ export default function Inicio({ usuario, aoNavegar }) {
         <span className="wip__etiqueta">Status do sistema</span>
         <h2>(WORK IN PROGRESS)</h2>
         <p>
-          O catálogo de produtos e categorias e o cadastro de parceiros já estão
-          disponíveis. Os módulos de financeiro e caixa estão em construção.
+          O catálogo de produtos e categorias, o cadastro de parceiros e o financeiro
+          (títulos, baixas e caixas) já estão disponíveis. Operações e relatórios estão
+          em construção.
         </p>
       </section>
     </div>

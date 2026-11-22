@@ -26,6 +26,8 @@ function iniciais(nome = '') {
 export default function TelaPrincipal({ usuario, aoSair }) {
   const [pagina, setPagina] = useState('inicio')
   const [menuAberto, setMenuAberto] = useState(false)
+  // Aba aberta ao entrar no Financeiro (o dashboard leva direto para Caixas).
+  const [abaFinanceiro, setAbaFinanceiro] = useState('titulos')
 
   useEffect(() => {
     // Pré-aquece o cache das abas assim que o shell monta. Assim, quando o
@@ -45,7 +47,9 @@ export default function TelaPrincipal({ usuario, aoSair }) {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [pagina])
 
-  function navegar(destino) {
+  /** `opcoes.aba` escolhe a aba do Financeiro (ex.: `navegar('financeiro', { aba: 'caixas' })`). */
+  function navegar(destino, opcoes = {}) {
+    if (destino === 'financeiro') setAbaFinanceiro(opcoes.aba || 'titulos')
     setPagina(destino)
     setMenuAberto(false)
   }
@@ -112,7 +116,9 @@ export default function TelaPrincipal({ usuario, aoSair }) {
               <Categorias aoNavegar={navegar} />
             ) : null}
             {pagina === 'parceiros' ? <Parceiros /> : null}
-            {pagina === 'financeiro' ? <Financeiro /> : null}
+            {pagina === 'financeiro' ? (
+              <Financeiro key={abaFinanceiro} abaInicial={abaFinanceiro} />
+            ) : null}
           </main>
         </div>
       </div>

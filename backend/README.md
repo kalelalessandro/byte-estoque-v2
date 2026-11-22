@@ -64,7 +64,7 @@ o `uv.lock` deve ser versionado no Git.
 | POST | `/api/auth/login` | não | Autentica e cria a sessão |
 | POST | `/api/auth/logout` | não | Encerra a sessão |
 | GET | `/api/auth/me` | **sim** | Dados do usuário logado |
-| GET | `/api/dashboard/resumo` | **sim** | Resumo agregado: produtos, categorias, parceiros e valor em estoque |
+| GET | `/api/dashboard/resumo` | **sim** | Resumo agregado: produtos, categorias, parceiros, valor em estoque e `dinheiro` (valor contado no último caixa fechado) |
 | POST | `/api/categorias` | **sim** | Cria uma categoria |
 | GET | `/api/categorias` | **sim** | Lista as categorias da empresa |
 | PATCH | `/api/categorias/<id>` | **sim** | Renomeia uma categoria |
@@ -126,6 +126,11 @@ Sessão de caixa (`caixas`) com movimentos adicionais (`operacoes_caixa`). Regra
   fechamento devolve exatamente o resumo calculado sob trava. Ordem de travas do sistema:
   empresa → título → caixa.
 - `GET /api/caixas/<id>` traz o `extrato`: baixas (com parceiro) e suprimentos/sangrias.
+- **Dashboard:** `GET /api/dashboard/resumo` devolve `dinheiro` = `{ valor, id_caixa, fechado_em }`
+  do **último caixa fechado** da empresa (o `valor_contado`, não o esperado), ou `null` até o
+  primeiro fechamento. Caixa ainda aberto não conta: o dinheiro só é confirmado na contagem.
+  O card "Dinheiro" do Início mostra esse valor assim que o caixa fecha (qualquer escrita limpa
+  o cache do front-end) e leva ao Financeiro, na aba Caixas.
 
 ### Títulos financeiros
 
@@ -356,7 +361,7 @@ uv run pytest tests/test_parceiros.py
 uv run pytest tests/test_interacoes.py
 ```
 
-Resultado esperado: **352 passed, 4 skipped, 1 xfailed** (3 skips de UI/E2E da
+Resultado esperado: **358 passed, 4 skipped, 1 xfailed** (3 skips de UI/E2E da
 autenticação + PRD-N22 de confirmação visual; o xfail é o LOG-P08, impossível
 pelo schema `usuarios.id_empresa NOT NULL`; veja
 [tests/README.md](tests/README.md)).
@@ -437,6 +442,7 @@ backend/
     ├── apoio_baixas.py       # títulos, caixas, operações, baixas e limpeza (BAI/TIT)
     ├── test_titulos.py       # TIT-Pxx / TIT-Nxx + SEG-N06/N09 + cancelar x baixar (concorrência)
     ├── test_caixas.py        # CXA-Pxx / CXA-Nxx + CON-N04 + abrir/fechar/lançar (concorrência)
+    ├── test_dashboard_dinheiro.py  # card Dinheiro do dashboard ligado ao fechamento do caixa
     ├── test_fluxo_empresa.py # transação atômica + contexto de empresa
     └── test_integridade_banco_auth.py  # BDD/FKN/INTG de autenticação
 ```
