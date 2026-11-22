@@ -19,7 +19,7 @@ Sistema SaaS multi-tenant de **CRM, Controle de Estoque e Gestão Financeira** (
   - ✅ Módulos Financeiro e Caixa implementados (Caixas, Movimentos de Caixa, Títulos Financeiros e Baixas Financeiras + telas no front-end).
   - ✅ Módulo de Operações implementado (vendas/compras, estoque, títulos 1x/parcelados, edição, cancelamento + testes).
   - ✅ Módulo de Gestão de Usuários/Funcionários implementado (cargos Dono/Funcionário, CRUD, permissões de exclusão e isolamento + testes).
-  - ✅ Plano de testes V1.5 auditado: 395 casos, suíte de aceitação com exatamente 395 testes (382 passed, 12 skipped, 1 xfailed), 6 casos E2E documentados como skip e suíte estendida opcional via `--all-tests`.
+  - ✅ Plano de testes V1.6 finalizado: 395 casos, suíte pytest com exatamente 395 testes (382 passed, 12 skipped, 1 xfailed), sem testes ocultos/deselected e casos E2E documentados como skip.
   - ✅ Módulos finalizados: autenticação, produtos/categorias, parceiros/interações, financeiro/caixa, operações e usuários.
 
 ---

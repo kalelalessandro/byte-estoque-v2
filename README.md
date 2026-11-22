@@ -88,7 +88,7 @@ uv run pytest
 ```
 
 Resultado esperado: **382 passed, 12 skipped, 1 xfailed** (suíte de aceitação
-com os 395 casos do plano V1.5).
+com os 395 casos do plano V1.6).
 
 > Os testes usam um hash de senha rápido (`PBKDF2`) **somente no ambiente de
 > teste**, para não gastar ~1 s por conta criada. Em produção o hash continua

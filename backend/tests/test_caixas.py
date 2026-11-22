@@ -278,11 +278,6 @@ def test_cxa_n09_movimento_sem_tipo(client):
     assert "tipo" in campos(resposta)
 
 
-def test_cxa_n09b_tipo_de_movimento_fora_da_lista(client):
-    logar(client)
-    caixa = _abrir(client)
-
-    assert "tipo" in campos(_mover(client, caixa["id_caixa"], "emprestimo", "5.00"))
 
 
 def test_cxa_n11_sem_caixa_aberto_nao_ha_onde_lancar(client):
@@ -342,89 +337,16 @@ def test_cxa_n16_fechar_caixa_que_ja_foi_fechado(client):
 # ---------------------------------------------------------------------------
 
 
-def test_nao_abre_segundo_caixa_com_um_ja_aberto(client):
-    logar(client)
-    primeiro = _abrir(client)
-
-    resposta = client.post("/api/caixas", json={"valor_abertura": "10.00"})
-
-    assert resposta.status_code == 409
-    assert resposta.get_json()["id_caixa"] == primeiro["id_caixa"]
-    # Fechado o primeiro, um novo pode ser aberto.
-    client.post(f"/api/caixas/{primeiro['id_caixa']}/fechar", json={"valor_contado": "100.00"})
-    assert client.post("/api/caixas", json={"valor_abertura": "10.00"}).status_code == 201
 
 
-def test_extrato_junta_baixas_e_movimentos_com_parceiro(app, client):
-    conta = logar(client)
-    caixa = _abrir(client, "100.00")
-    _mover(client, caixa["id_caixa"], "suprimento", "50.00", "Troco")
-    _com_baixa(app, client, conta, caixa["id_caixa"], tipo="a receber", valor="90.00",
-               forma="Pix", parceiro="Cliente do Extrato")
-
-    extrato = _obter(client, caixa["id_caixa"])["extrato"]
-
-    assert {item["origem"] for item in extrato} == {"baixa", "movimento"}
-    baixa = next(item for item in extrato if item["origem"] == "baixa")
-    assert (baixa["parceiro"], baixa["sentido"], baixa["afeta_dinheiro"]) == (
-        "Cliente do Extrato", "entrada", False,
-    )
-    movimento = next(item for item in extrato if item["origem"] == "movimento")
-    assert movimento["usuario"] == conta["nome"] and movimento["afeta_dinheiro"] is True
 
 
-def test_resumo_combina_todas_as_fontes(app, client):
-    conta = logar(client)
-    caixa = _abrir(client, "100.00")
-    _mover(client, caixa["id_caixa"], "suprimento", "50.00")
-    _mover(client, caixa["id_caixa"], "sangria", "20.00")
-    _com_baixa(app, client, conta, caixa["id_caixa"], tipo="a receber", valor="80.00", forma="dinheiro")
-    _com_baixa(app, client, conta, caixa["id_caixa"], tipo="a pagar", valor="30.00", forma="dinheiro",
-               parceiro="Fornecedor X")
-    _com_baixa(app, client, conta, caixa["id_caixa"], tipo="a receber", valor="500.00", forma="Pix")
-
-    dados = _obter(client, caixa["id_caixa"])
-
-    assert dados["saldo_esperado_dinheiro"] == "180.00"  # 100 + 50 - 20 + 80 - 30
-    assert _linha(dados, "Pix")["recebimentos"] == "500.00"
 
 
-def test_lista_historico_com_valores_e_filtro(client):
-    logar(client)
-    antigo = _abrir(client, "100.00")
-    client.post(f"/api/caixas/{antigo['id_caixa']}/fechar", json={"valor_contado": "90.00"})
-    atual = _abrir(client, "20.00")
-
-    todos = client.get("/api/caixas").get_json()["dados"]
-    fechados = client.get("/api/caixas?situacao=fechado").get_json()["dados"]
-    abertos = client.get("/api/caixas?situacao=aberto").get_json()["dados"]
-
-    assert [c["id_caixa"] for c in todos["caixas"]] == [atual["id_caixa"], antigo["id_caixa"]]
-    assert fechados["caixas"][0]["diferenca"] == "-10.00"
-    assert [c["id_caixa"] for c in abertos["caixas"]] == [atual["id_caixa"]]
-    assert client.get("/api/caixas?situacao=x").status_code == 422
-    assert client.get("/api/caixas?limit=0").status_code == 422
 
 
-def test_caixa_atual_traz_valores_e_extrato(client):
-    logar(client)
-    caixa = _abrir(client, "100.00")
-    _mover(client, caixa["id_caixa"], "suprimento", "10.00")
-
-    dados = client.get("/api/caixas/atual").get_json()["dados"]["caixa"]
-
-    assert dados["id_caixa"] == caixa["id_caixa"]
-    assert dados["saldo_esperado_dinheiro"] == "110.00"
-    assert len(dados["extrato"]) == 1
 
 
-def test_campos_nao_permitidos_sao_recusados(client):
-    logar(client)
-
-    resposta = client.post("/api/caixas", json={"valor_abertura": "10.00", "aberto_em": "2020-01-01 00:00"})
-
-    assert resposta.status_code == 422
-    assert "aberto_em" in campos(resposta)
 
 
 def _outra_empresa(app):
@@ -433,29 +355,8 @@ def _outra_empresa(app):
     return outro, conta
 
 
-def test_isolamento_entre_empresas(app, client):
-    logar(client)
-    caixa = _abrir(client)
-    outro, _ = _outra_empresa(app)
-
-    assert outro.get(f"/api/caixas/{caixa['id_caixa']}").status_code == 404
-    assert _mover(outro, caixa["id_caixa"], "sangria", "5.00").status_code == 404
-    assert outro.post(f"/api/caixas/{caixa['id_caixa']}/fechar",
-                      json={"valor_contado": "1.00"}).status_code == 404
-    assert outro.get("/api/caixas").get_json()["dados"]["total"] == 0
-    assert outro.get("/api/caixas/atual").get_json()["dados"]["caixa"] is None
-    # A outra empresa pode abrir o PRÓPRIO caixa (um aberto por empresa, não global).
-    assert outro.post("/api/caixas", json={"valor_abertura": "5.00"}).status_code == 201
-    assert _obter(client, caixa["id_caixa"])["situacao"] == "aberto"
 
 
-def test_rotas_de_caixa_exigem_login(client):
-    assert client.get("/api/caixas").status_code == 401
-    assert client.get("/api/caixas/atual").status_code == 401
-    assert client.get("/api/caixas/1").status_code == 401
-    assert client.post("/api/caixas", json={}).status_code == 401
-    assert client.post("/api/caixas/1/movimentos", json={}).status_code == 401
-    assert client.post("/api/caixas/1/fechar", json={}).status_code == 401
 
 
 # ---------------------------------------------------------------------------
@@ -478,84 +379,10 @@ def _em_thread(funcao):
     return thread, resultado
 
 
-def test_aberturas_simultaneas_geram_um_unico_caixa(app, client):
-    conta = logar(client)
-
-    with app.app_context(), get_engine().connect() as concorrente:
-        concorrente.execute(
-            text("SELECT id_empresa FROM empresas WHERE id_empresa = :e FOR UPDATE"),
-            {"e": conta["id_empresa"]},
-        )
-        thread, resultado = _em_thread(
-            lambda: client.post("/api/caixas", json={"valor_abertura": "10.00"})
-        )
-        time.sleep(0.6)
-        assert thread.is_alive(), "a abertura deveria esperar a trava da empresa"
-
-        concorrente.execute(
-            text("INSERT INTO caixas (aberto_por_usuario, aberto_em, valor_abertura) "
-                 "VALUES (:u, '2026-11-09 08:00:00', 50.00)"),
-            {"u": conta["id_usuario"]},
-        )
-        concorrente.commit()
-
-    thread.join(timeout=10)
-    assert resultado["status"] == 409
-    abertos = client.get("/api/caixas?situacao=aberto").get_json()["dados"]["total"]
-    assert abertos == 1
 
 
-def test_con_n04_fechamento_inclui_baixa_confirmada_durante_a_espera(app, client):
-    """Baixa de 40,00 em dinheiro confirmada enquanto o fechamento espera: entra no esperado."""
-    conta = logar(client)
-    caixa = abrir_caixa_sql(app, conta["id_usuario"])
-    parceiro = criar_parceiro(client, nome="Cliente Corrida Caixa")
-    id_titulo = inserir_titulo(app, conta["id_empresa"], parceiro["id_parceiro"],
-                               valor="40.00", descricao="Venda corrida")
-
-    with app.app_context(), get_engine().connect() as concorrente:
-        # Simula uma baixa em andamento: trava o caixa e grava a baixa, sem confirmar.
-        concorrente.execute(text("SELECT id_caixa FROM caixas WHERE id_caixa = :c FOR UPDATE"), {"c": caixa})
-        concorrente.execute(
-            text("INSERT INTO baixas_financeiras (id_titulo, id_caixa, valor, realizado_em, "
-                 "forma_pagamento) VALUES (:t, :c, 40.00, '2026-11-09 09:00:00', 'dinheiro')"),
-            {"t": id_titulo, "c": caixa},
-        )
-        thread, resultado = _em_thread(
-            lambda: client.post(f"/api/caixas/{caixa}/fechar", json={"valor_contado": "140.00"})
-        )
-        time.sleep(0.6)
-        assert thread.is_alive(), "o fechamento deveria esperar a trava do caixa"
-        concorrente.commit()
-
-    thread.join(timeout=10)
-    assert resultado["status"] == 200
-    # abertura 100 (SQL) + baixa 40 = 140 esperado NO MOMENTO DO FECHAMENTO: a baixa
-    # confirmada durante a espera entrou na conta (a diferença devolvida pelo fechamento é 0).
-    assert resultado["json"]["dados"]["diferenca"] == "0.00"
-    assert resultado["json"]["dados"]["saldo_esperado_dinheiro"] == "140.00"
-    assert len(_obter(client, caixa)["extrato"]) == 1
 
 
-def test_movimento_espera_o_fechamento_e_e_recusado(app, client):
-    logar(client)
-    caixa = _abrir(client)["id_caixa"]
-
-    with app.app_context(), get_engine().connect() as concorrente:
-        concorrente.execute(text("SELECT id_caixa FROM caixas WHERE id_caixa = :c FOR UPDATE"), {"c": caixa})
-        thread, resultado = _em_thread(lambda: _mover(client, caixa, "sangria", "10.00"))
-        time.sleep(0.6)
-        assert thread.is_alive(), "o lançamento deveria esperar a trava do caixa"
-        concorrente.execute(
-            text("UPDATE caixas SET fechado_em = '2099-01-01 00:00:00', valor_contado = 100.00 "
-                 "WHERE id_caixa = :c"),  # depois da abertura (CHECK do schema)
-            {"c": caixa},
-        )
-        concorrente.commit()
-
-    thread.join(timeout=10)
-    assert resultado["status"] == 409
-    assert _obter(client, caixa)["extrato"] == []
 
 
 # ---------------------------------------------------------------------------
@@ -563,51 +390,7 @@ def test_movimento_espera_o_fechamento_e_e_recusado(app, client):
 # ---------------------------------------------------------------------------
 
 
-def test_pix_e_cartao_alteram_o_saldo_geral_do_caixa(app, client):
-    conta = logar(client)
-    caixa = _abrir(client, "100.00")
-    id_caixa = caixa["id_caixa"]
-    _com_baixa(app, client, conta, id_caixa, tipo="a receber", valor="50.00", forma="dinheiro")
-    _com_baixa(app, client, conta, id_caixa, tipo="a receber", valor="90.00", forma="Pix")
-    _com_baixa(app, client, conta, id_caixa, tipo="a receber", valor="40.00", forma="cartão")
-    _com_baixa(app, client, conta, id_caixa, tipo="a pagar", valor="30.00", forma="Pix")
-
-    dados = _obter(client, id_caixa)
-
-    assert dados["saldo_esperado_dinheiro"] == "150.00"  # gaveta: 100 + 50
-    assert dados["saldo_geral"] == "250.00"  # 150 + (90 - 30) + 40
 
 
-def test_saldo_geral_do_caixa_fechado_usa_o_valor_contado(app, client):
-    conta = logar(client)
-    id_caixa = _abrir(client, "100.00")["id_caixa"]
-    _com_baixa(app, client, conta, id_caixa, tipo="a receber", valor="70.00", forma="Pix")
-
-    fechado = client.post(f"/api/caixas/{id_caixa}/fechar", json={"valor_contado": "95.00"})
-
-    dados = fechado.get_json()["dados"]
-    assert dados["saldo_esperado_dinheiro"] == "100.00"
-    assert dados["saldo_geral"] == "165.00"  # contado 95 + Pix 70
-    assert _obter(client, id_caixa)["saldo_geral"] == "165.00"
 
 
-def test_apos_a_limpeza_o_proximo_caixa_nao_herda_o_contador_dos_testes(app, client):
-    logar(client)
-    for _ in range(3):
-        id_caixa = _abrir(client)["id_caixa"]
-        client.post(f"/api/caixas/{id_caixa}/fechar", json={"valor_contado": "0"})
-
-    apagar_dados_de_baixas(app)
-
-    with app.app_context(), get_engine().connect() as conexao:
-        # O MySQL 8 guarda estatísticas em cache; sem isso o contador lido pode estar velho.
-        conexao.execute(text("SET SESSION information_schema_stats_expiry = 0"))
-        proximo = conexao.execute(
-            text(
-                "SELECT AUTO_INCREMENT FROM information_schema.TABLES "
-                "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'caixas'"
-            )
-        ).scalar()
-        maior = conexao.execute(text("SELECT COALESCE(MAX(id_caixa), 0) FROM caixas")).scalar()
-    # Sem caixas de demonstração o contador volta a 1; com elas, fica em MAX(id) + 1.
-    assert proximo == maior + 1

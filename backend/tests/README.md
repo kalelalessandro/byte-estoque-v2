@@ -1,6 +1,6 @@
 # Testes da API — Autenticação, Categorias, Produtos, Parceiros, Interações, Financeiro, Operações e Usuários
 
-Suíte `pytest` baseada no `crm-estoque/docs/plano de testes.pdf` (V1.5),
+Suíte `pytest` baseada no `crm-estoque/docs/plano de testes.pdf` (V1.6),
 cobrindo **autenticação** (LOG/EMP e casos correlatos de BDD, FKN, INTG, COL e
 SEG), **categorias (CAT)**, **produtos (PRD)**, **parceiros (PAR)** e
 **interações (INT)**, **títulos financeiros (TIT)**, **baixas financeiras (BAI)**,
@@ -37,18 +37,12 @@ contra o **MySQL real** do Docker, sem mock, usando o `test_client` do Flask.
   bloqueio de exclusão e de alteração do Dono (403), exclusão da própria conta,
   FK RESTRICT e isolamento entre empresas
 - **41 extras de banco/colacao (`test_plano_banco_complementar.py`)** → BDD,
-  FKN, INTG, CAR e COL-N02/N03 do plano V1.5, executados via SQL direto
-- **4 extras** de fluxo/transação (`test_fluxo_empresa.py`)
-- **3 extras** de performance/dashboard: resumo agregado por empresa
-  (`test_dashboard.py`)
-- **1 extra** de configuração: hash padrão do cadastro nunca fica `None`
-  (`test_config.py`)
+  FKN, INTG, CAR e COL-N02/N03 do plano V1.6, executados via SQL direto
 - Limpeza automática dos dados criados, antes e depois de cada teste
-- **Suíte de aceitação V1.5**: exatamente **395 testes**, um para cada caso do
+- **Suíte de aceitação V1.6**: exatamente **395 testes**, um para cada caso do
   PDF; 382 passam, 12 são `skip` documentados (6 E2E + 5 lacunas de escopo +
-  1 concorrência) e 1 é `xfail` (LOG-P08 impossível pelo schema).
-- **Suíte estendida**: 523 nós em `uv run pytest --all-tests`, com testes
-  adicionais de regressão, segurança, concorrência e performance.
+  1 concorrência) e 1 é `xfail` (LOG-P08 impossível pelo schema). Não há
+  `deselected` nem suíte estendida.
 - Resultado atual da suíte de aceitação: **382 passed, 12 skipped, 1 xfailed**
 
 ---
@@ -68,7 +62,7 @@ uv run pytest tests/test_login.py            # só LOG
 uv run pytest tests/test_cadastro_empresa.py # só EMP
 uv run pytest tests/test_categorias.py       # só CAT
 uv run pytest tests/test_produtos.py         # só PRD
-uv run pytest tests/test_dashboard.py        # resumo agregado do dashboard
+uv run pytest tests/test_plano_banco_complementar.py # casos BDD/FKN/INTG/CAR/COL
 uv run pytest tests/test_operacoes.py        # só OPE (operações)
 uv run pytest tests/test_usuarios.py         # só USR (equipe)
 uv run pytest -m banco         # só SQL direto
@@ -100,21 +94,15 @@ uv run pytest -k "LOG-N"       # filtra por ID
 | BAI — Baixas financeiras | BAI-P01..P08, BAI-N01..N13 (+ SEG-N07/N08, CON-N03/N04) | `test_baixas.py` | 21 + extras |
 | OPE — Operações | criação venda/compra, parcelas, estoque, edição, cancelamento e baixa sem parceiro | `test_operacoes.py` | 43 |
 | USR — Usuários/Funcionários | CRUD de funcionários, dono/funcionário, login, permissões de exclusão/alteração e isolamento | `test_usuarios.py` | 40 |
-| Banco complementar (V1.5) | BDD, FKN, INTG, CAR e COL que faltavam no pytest | `test_plano_banco_complementar.py` | 41 |
-| Pendências do plano (V1.5) | 7 casos sem automação própria, marcados como skip documentado | `test_plano_pendencias.py` | 7 skips |
-| Manifesto da aceitação (V1.5) | mapa caso do PDF → nodeid pytest, filtrando a suíte padrão para 395 | `plano_manifest.py` | 395 entradas |
-| Fluxo/transação (extras, fora do plano) | contexto de empresa, sinal defensivo e rollback atômico | `test_fluxo_empresa.py` | 4 |
-| Dashboard (extras, performance) | `GET /api/dashboard/resumo`: contagens (produtos, categorias, parceiros) + valor em estoque no banco, isolamento por empresa, 401 | `test_dashboard.py` | 3 |
-| Dashboard — Dinheiro (extras) | `dinheiro` = saldo geral (contado + Pix + cartão) do último caixa fechado: nulo sem fechamento, caixa aberto não conta, aparece ao fechar, o mais recente vence, zero é zero, isolamento por empresa, Pix/cartão somam | `test_dashboard_dinheiro.py` | 7 |
-| Configuração (extra, regressão) | hash de senha padrão do cadastro é válido (nunca `None`) | `test_config.py` | 1 |
+| Banco complementar (V1.6) | BDD, FKN, INTG, CAR e COL que faltavam no pytest | `test_plano_banco_complementar.py` | 41 |
+| Pendências do plano (V1.6) | 7 casos sem automação própria, marcados como skip documentado | `test_plano_pendencias.py` | 7 skips |
 
 Os IDs dos casos aparecem no nome de cada teste (ex.:
 `test_log_p02_cadastro_usuario_com_campos_validos`,
 `test_emp_negativos_validacao[EMP-N06]`).
 
-> O plano de testes (PDF) está na **V1.5**: 395 casos, matriz de cobertura da
-> suíte de aceitação, 12 skips documentados (6 E2E) e controle de versões no fim
-> do documento.
+> O plano de testes (PDF) está na **V1.6**: 395 casos, suíte final de 395 testes,
+> 12 skips documentados (6 E2E) e controle de versões no fim do documento.
 
 ---
 

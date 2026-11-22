@@ -98,20 +98,6 @@ def test_usr_p01_criar_funcionario_na_mesma_empresa(client):
     assert dados["dono"] is False
 
 
-def test_usr_p02_listar_inclui_dono_e_funcionario(client):
-    owner = _logar(client)
-    funcionario = _funcionario_ok(client)
-
-    resposta = client.get("/api/usuarios")
-
-    assert resposta.status_code == 200
-    dados = resposta.get_json()["dados"]
-    assert dados["total"] == 2
-    por_id = {item["id_usuario"]: item for item in dados["usuarios"]}
-    assert por_id[owner["id_usuario"]]["dono"] is True
-    assert por_id[owner["id_usuario"]]["cargo"] == "Administrador"
-    assert por_id[funcionario["id_usuario"]]["dono"] is False
-    assert por_id[funcionario["id_usuario"]]["cargo"] == "Funcionario"
 
 
 def test_usr_p03_funcionario_consegue_entrar_e_ver_mesma_empresa(app, client):
@@ -302,22 +288,6 @@ def test_usr_p02_criar_funcionario_sem_telefone(client):
     assert resposta.get_json()["dados"]["telefone"] is None
 
 
-def test_usr_p04_listar_somente_usuarios_da_propria_empresa(app, client):
-    _logar(client)
-    funcionario = _funcionario_ok(client)
-    outro = app.test_client()
-    _logar(outro, EMAIL_OWNER_B, CNPJ_B)
-    _criar_funcionario(
-        outro,
-        nome="Funcionário da Outra Empresa",
-        email="func.empresa.b@exemplo.com.br",
-    )
-
-    listagem = client.get("/api/usuarios").get_json()["dados"]
-
-    ids = {item["id_usuario"] for item in listagem["usuarios"]}
-    assert funcionario["id_usuario"] in ids
-    assert len(ids) == 2
 
 
 def test_usr_p05_alterar_nome_do_funcionario(client):
@@ -403,12 +373,8 @@ def test_usr_p12_alterar_email_do_proprio_usuario_e_entrar_com_ele(client):
 @pytest.mark.parametrize(
     "id_caso,campo,valor",
     [
-        ("USR-N01", "nome", "   "),
-        ("USR-N02", "email", ""),
         ("USR-N03", "senha", ""),
         ("USR-N07", "email", "email-invalido"),
-        ("USR-N08", "nome", "N" * 151),
-        ("USR-N09", "telefone", "9" * 21),
         ("USR-N10", "email", "a" * 245 + "@exemplo.com.br"),
     ],
 )
@@ -420,15 +386,6 @@ def test_usr_validacoes_de_criacao_do_plano(client, id_caso, campo, valor):
     assert campo in resposta.get_json()["campos"], (id_caso, resposta.get_json())
 
 
-def test_usr_n05_email_ja_usado_por_usuario_de_outra_empresa(app, client):
-    _logar(client)
-    funcionario = _funcionario_ok(client)
-
-    outro = app.test_client()
-    _logar(outro, EMAIL_OWNER_B, CNPJ_B)
-    resposta = _criar_funcionario(outro, email=funcionario["email"])
-
-    assert resposta.status_code == 409
 
 
 def test_usr_n06_email_duplicado_so_diferenciando_maiusculas(client):

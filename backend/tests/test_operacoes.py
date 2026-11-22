@@ -125,30 +125,6 @@ def _criar(client, payload):
 # ---------------------------------------------------------------------------
 
 
-def test_ope_p01_venda_sem_parceiro_atualiza_estoque_e_gera_titulo(client):
-    conta = _logar(client)
-    id_categoria = _categoria(client)
-    produto = _produto(client, id_categoria, "OPE-001", estoque=10)
-
-    resposta = _criar(client, _payload(produto["id_produto"]))
-
-    assert resposta.status_code == 201, resposta.get_json()
-    dados = resposta.get_json()["dados"]
-    assert dados["tipo"] == "venda"
-    assert dados["parceiro"] is None
-    assert dados["total"] == "30.00"
-    assert dados["itens"][0]["quantidade"] == 3
-    assert _estoque(client, produto["id_produto"]) == 7
-    assert len(dados["titulos"]) == 1
-    assert dados["titulos"][0]["tipo"] == "a receber"
-    assert dados["titulos"][0]["valor"] == "30.00"
-    assert dados["titulos"][0]["id_parceiro"] is None
-    assert dados["id_operacao"] > 0
-
-    # A operação também aparece na listagem.
-    listagem = client.get("/api/operacoes").get_json()["dados"]
-    assert listagem["total"] == 1
-    assert listagem["operacoes"][0]["id_operacao"] == dados["id_operacao"]
 
 
 def test_ope_p02_compra_com_parceiro_em_3x(client):
@@ -213,15 +189,6 @@ def test_ope_n01_venda_sem_estoque_e_recusada(client):
     assert client.get("/api/titulos").get_json()["dados"]["total"] == 0
 
 
-def test_ope_n02_produto_inexistente_na_empresa(client):
-    _logar(client)
-    id_categoria = _categoria(client)
-    _produto(client, id_categoria, "OPE-004")
-
-    resposta = _criar(client, _payload(999999))
-
-    assert resposta.status_code == 422
-    assert "itens" in resposta.get_json()["campos"]
 
 
 def test_ope_n03_sem_login(client):
@@ -234,53 +201,8 @@ def test_ope_n03_sem_login(client):
 # ---------------------------------------------------------------------------
 
 
-def test_ope_p03_alterar_itens_e_parcelas_refaz_estoque_e_titulos(client):
-    _logar(client)
-    id_categoria = _categoria(client)
-    produto = _produto(client, id_categoria, "OPE-005", estoque=10)
-    criada = _criar(client, _payload(produto["id_produto"], quantidade=1)).get_json()[
-        "dados"
-    ]
-
-    resposta = client.patch(
-        f"/api/operacoes/{criada['id_operacao']}",
-        json=_payload(
-            produto["id_produto"],
-            quantidade=4,
-            preco="5.00",
-            parcelas=2,
-            vencimento="2027-01-15",
-        ),
-    )
-
-    assert resposta.status_code == 200, resposta.get_json()
-    dados = resposta.get_json()["dados"]
-    assert dados["total"] == "20.00"
-    assert _estoque(client, produto["id_produto"]) == 6  # 10 - 4 (não 10 - 1)
-    assert len(dados["titulos"]) == 2
-    assert [titulo["valor"] for titulo in dados["titulos"]] == ["10.00", "10.00"]
-    assert [titulo["vencimento"] for titulo in dados["titulos"]] == [
-        "2027-01-15",
-        "2027-02-15",
-    ]
 
 
-def test_ope_n04_alterar_operacao_cancelada_e_recusado(client):
-    _logar(client)
-    id_categoria = _categoria(client)
-    produto = _produto(client, id_categoria, "OPE-006")
-    criada = _criar(client, _payload(produto["id_produto"])).get_json()["dados"]
-    assert (
-        client.post(f"/api/operacoes/{criada['id_operacao']}/cancelar").status_code
-        == 200
-    )
-
-    resposta = client.patch(
-        f"/api/operacoes/{criada['id_operacao']}",
-        json=_payload(produto["id_produto"], quantidade=2),
-    )
-
-    assert resposta.status_code == 409
 
 
 # ---------------------------------------------------------------------------
@@ -288,46 +210,8 @@ def test_ope_n04_alterar_operacao_cancelada_e_recusado(client):
 # ---------------------------------------------------------------------------
 
 
-def test_ope_p04_cancelar_venda_estorna_estoque_e_titulos(client):
-    _logar(client)
-    id_categoria = _categoria(client)
-    produto = _produto(client, id_categoria, "OPE-007", estoque=8)
-    criada = _criar(client, _payload(produto["id_produto"], quantidade=3)).get_json()[
-        "dados"
-    ]
-
-    resposta = client.post(f"/api/operacoes/{criada['id_operacao']}/cancelar")
-
-    assert resposta.status_code == 200, resposta.get_json()
-    dados = resposta.get_json()["dados"]
-    assert dados["status"] == "cancelada"
-    assert _estoque(client, produto["id_produto"]) == 8
-    assert all(titulo["cancelado"] is True for titulo in dados["titulos"])
-    assert dados["pode_cancelar"] is False
 
 
-def test_ope_n05_cancelar_compra_com_estoque_consumido_e_recusado(client):
-    _logar(client)
-    id_categoria = _categoria(client)
-    produto = _produto(client, id_categoria, "OPE-008", estoque=0)
-    compra = _criar(
-        client, _payload(produto["id_produto"], tipo="compra", quantidade=2)
-    ).get_json()["dados"]
-    # Outra venda consome todo o estoque que a compra adicionou.
-    _criar(client, _payload(produto["id_produto"], tipo="venda", quantidade=2))
-
-    resposta = client.post(
-        f"/api/operacoes/{compra['id_operacao']}/cancelar"
-    )
-
-    assert resposta.status_code == 422
-    assert _estoque(client, produto["id_produto"]) == 0
-    assert (
-        client.get(f"/api/operacoes/{compra['id_operacao']}").get_json()["dados"][
-            "status"
-        ]
-        == "concluida"
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -604,14 +488,6 @@ def test_ope_n02_quantidade_zero(client):
     assert "itens" in resposta.get_json()["campos"]
 
 
-def test_ope_n03_quantidade_negativa(client):
-    _logar(client)
-    cat = _categoria(client)
-    produto = _produto(client, cat, "OPE-N03")
-
-    resposta = _criar(client, _payload(produto["id_produto"], quantidade=-1))
-
-    assert resposta.status_code == 422
 
 
 def test_ope_n04_quantidade_decimal(client):

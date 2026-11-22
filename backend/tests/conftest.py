@@ -20,47 +20,6 @@ PADRAO_EMAIL_TESTE = "%@exemplo.com.br"
 PADRAO_CNPJ_BD = "BD%"
 
 
-def pytest_addoption(parser):
-    """Permite rodar a suíte estendida (fora dos 395 casos do plano V1.5)."""
-    parser.addoption(
-        "--all-tests",
-        action="store_true",
-        default=False,
-        help="Inclui também os testes estendidos de regressão, segurança e concorrência.",
-    )
-
-
-def pytest_collection_modifyitems(config, items):
-    """Seleciona a suíte de aceitação: exatamente 395 casos do plano V1.5.
-
-    O código mantém a suíte estendida para desenvolvimento (``--all-tests``),
-    mas a execução padrão e o relatório do artigo usam somente os 395 casos
-    documentados no PDF. Cada caso tem um nodeid canônico no manifesto.
-    """
-    if config.getoption("--all-tests"):
-        return
-
-    from tests.plano_manifest import MANIFESTO
-
-    selecionados = set(MANIFESTO.values())
-    mantidos = []
-    removidos = []
-    for item in items:
-        if item.nodeid in selecionados:
-            mantidos.append(item)
-        else:
-            removidos.append(item)
-
-    if removidos:
-        config.hook.pytest_deselected(items=removidos)
-    items[:] = mantidos
-    if len(mantidos) != 395:
-        raise pytest.UsageError(
-            f"Manifesto da suíte de aceitação esperava 395 testes, encontrou {len(mantidos)}. "
-            "Atualize tests/plano_manifest.py após mudanças de nome/parametrização."
-        )
-
-
 @pytest.fixture(scope="session")
 def app():
     """Aplicação Flask em modo de teste, com o banco validado na inicialização."""

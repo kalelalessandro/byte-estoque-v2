@@ -377,9 +377,8 @@ uv run pytest tests/test_interacoes.py
 ```
 
 Resultado esperado: **382 passed, 12 skipped, 1 xfailed** na suíte de
-aceitação (395 casos do plano V1.5; 6 skips são E2E e os outros são lacunas de
-escopo documentadas). Para rodar também a suíte estendida:
-`uv run pytest --all-tests`.
+aceitação (395 casos do plano V1.6; 6 skips são E2E e os outros são lacunas de
+escopo documentadas).
 
 > A suíte limpa os dados que cria (e-mails `@exemplo.com.br`, CNPJs de teste e
 > registros criados pela API) antes e depois de cada teste, sem apagar dados de
@@ -457,8 +456,10 @@ backend/
     ├── apoio_baixas.py       # títulos, caixas, operações, baixas e limpeza (BAI/TIT)
     ├── test_titulos.py       # TIT-Pxx / TIT-Nxx + SEG-N06/N09 + cancelar x baixar (concorrência)
     ├── test_caixas.py        # CXA-Pxx / CXA-Nxx + CON-N04 + abrir/fechar/lançar (concorrência)
-    ├── test_dashboard_dinheiro.py  # card Dinheiro do dashboard ligado ao fechamento do caixa
-    ├── test_fluxo_empresa.py # transação atômica + contexto de empresa
+    ├── test_plano_banco_complementar.py  # BDD/FKN/INTG/CAR/COL complementares
+    ├── test_plano_pendencias.py  # 7 casos do plano documentados como skip
+    ├── test_operacoes.py      # OPE-Pxx / OPE-Nxx + concorrência
+    ├── test_usuarios.py       # USR-Pxx / USR-Nxx + permissões Dono x Funcionário
     └── test_integridade_banco_auth.py  # BDD/FKN/INTG de autenticação
 ```
 
