@@ -717,6 +717,7 @@ def test_listar_paginacao_e_parametros_invalidos(client):
 
 
 def test_isolamento_entre_empresas(app, client):
+    """SEG-P02: a listagem de parceiros mostra somente os da empresa logada."""
     logar(client)
     parceiro = criar_parceiro(client, nome="Da Empresa A", email="a@cliente.com.br")
     outro, _ = _outra_empresa(app)
@@ -759,3 +760,26 @@ def test_dashboard_conta_parceiros_da_empresa(app, client):
 
     assert client.get("/api/dashboard/resumo").get_json()["dados"]["parceiros"] == 2
     assert outro.get("/api/dashboard/resumo").get_json()["dados"]["parceiros"] == 1
+
+
+def test_seg_n13_xss_na_observacao_do_parceiro_fica_como_texto(client):
+    """SEG-N13: payload de XSS na observação não é interpretado pela API."""
+    logar(client)
+    payload = "<script>alert('xss')</script>"
+    criado = criar_parceiro(client, nome="Parceiro SEG N13", observacao=payload)
+
+    assert criado["observacao"] == payload
+    assert client.get(f"/api/parceiros/{criado['id_parceiro']}").is_json
+
+
+def test_seg_n16_sql_injection_na_busca_de_parceiros(client):
+    """SEG-N16: busca trata aspas/comandos SQL como texto, sem injeção."""
+    logar(client)
+    criar_parceiro(client, nome="Parceiro Normal SEG N16")
+
+    resposta = client.get(
+        "/api/parceiros", query_string={"busca": "' OR 1=1 --"}
+    )
+
+    assert resposta.status_code == 200
+    assert resposta.get_json()["dados"]["total"] == 0

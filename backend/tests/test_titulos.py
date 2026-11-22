@@ -398,6 +398,7 @@ def test_titulo_sem_parceiro_herda_o_parceiro_da_operacao(app, client):
 
 
 def test_isolamento_entre_empresas_em_consulta_lista_e_cancelamento(app, client):
+    """SEG-P04: listagem de títulos mostra somente os da empresa logada."""
     conta = logar(client)
     id_titulo = inserir_titulo(app, conta["id_empresa"], None, descricao="Da empresa A")
     outro, _ = _outra_empresa(app)

@@ -312,6 +312,7 @@ def test_alterar_interacao_corpo_vazio(client):
 
 
 def test_interacao_de_parceiro_de_outra_empresa_responde_404(app, client):
+    """SEG-N05: interação em parceiro de outra empresa responde 404."""
     logar(client)
     parceiro_a = criar_parceiro(client, nome="Parceiro da Empresa A")
     interacao_a = _registrar(client, parceiro_a["id_parceiro"])
@@ -401,3 +402,15 @@ def test_guia_nao_mostra_interacoes_de_outra_empresa(app, client):
     # Nem filtrando pelo id do parceiro da empresa A.
     resposta = outro.get("/api/interacoes", query_string={"id_parceiro": parceiro_a["id_parceiro"]})
     assert resposta.get_json()["dados"]["total"] == 0
+
+
+def test_seg_n14_xss_na_descricao_da_interacao_fica_como_texto(client):
+    """SEG-N14: payload de XSS na descrição é retornado como texto JSON."""
+    logar(client)
+    parceiro = criar_parceiro(client, nome="Parceiro SEG N14")
+    payload = "<script>alert('xss')</script>"
+
+    criada = _registrar(client, parceiro["id_parceiro"], descricao=payload)
+
+    assert criada["descricao"] == payload
+    assert client.get(f"/api/parceiros/{parceiro['id_parceiro']}").is_json

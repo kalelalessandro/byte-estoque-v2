@@ -376,10 +376,10 @@ uv run pytest tests/test_parceiros.py
 uv run pytest tests/test_interacoes.py
 ```
 
-Resultado esperado: **387 passed, 4 skipped, 1 xfailed** (3 skips de UI/E2E da
-autenticação + PRD-N22 de confirmação visual; o xfail é o LOG-P08, impossível
-pelo schema `usuarios.id_empresa NOT NULL`; veja
-[tests/README.md](tests/README.md)).
+Resultado esperado: **382 passed, 12 skipped, 1 xfailed** na suíte de
+aceitação (395 casos do plano V1.5; 6 skips são E2E e os outros são lacunas de
+escopo documentadas). Para rodar também a suíte estendida:
+`uv run pytest --all-tests`.
 
 > A suíte limpa os dados que cria (e-mails `@exemplo.com.br`, CNPJs de teste e
 > registros criados pela API) antes e depois de cada teste, sem apagar dados de

@@ -201,6 +201,7 @@ def test_prd_p03_mesmo_sku_em_empresas_diferentes(app, client):
 
 
 def test_prd_n04_categoria_de_outra_empresa(app, client):
+    """PRD-N04/SEG-N02: produto com categoria de outra empresa é recusado."""
     _logar(client)
     outro = app.test_client()
     id_empresa_b = _logar(outro, "prod.b@exemplo.com.br", CNPJ_VALIDO_2)
@@ -496,3 +497,163 @@ def test_prd_n21_nao_apagar_produto_com_operacao(app, client):
 )
 def test_prd_n22_cancelar_confirmacao_nao_apaga(app, client):
     """PRD-N22: (caso de UI/E2E; não automatizado no pytest de API)."""
+
+
+# ---------------------------------------------------------------------------
+# Casos do plano V1.4 ainda sem teste específico (validações de criação/edição)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "id_caso,campo,valor",
+    [
+        ("PRD-N01", "sku", ""),
+        ("PRD-N02", "nome", "   "),
+        ("PRD-N05", "sku", "X" * 65),
+        ("PRD-N06", "nome", "N" * 151),
+        ("PRD-N07", "descricao", "D" * 501),
+        ("PRD-N08", "unidade_estoque", -1),
+        ("PRD-N09", "unidade_estoque", 1.5),
+        ("PRD-N11", "preco", -1),
+        ("PRD-N12", "preco", "abc"),
+        ("PRD-N13", "preco", "10000000000.01"),
+        ("PRD-N14", "preco", "1.234"),
+    ],
+)
+def test_prd_criacao_negativa_do_plano(app, client, id_caso, campo, valor):
+    """Cobre PRD-N01/N02/N05/N06/N07/N08/N09/N11/N12/N13/N14 do PDF."""
+    id_cat = _categoria(app, _logar(client))
+
+    resposta = client.post("/api/produtos", json=_payload(id_cat, **{campo: valor}))
+
+    assert resposta.status_code == 422, (id_caso, resposta.get_json())
+    assert campo in resposta.get_json()["campos"], (id_caso, resposta.get_json())
+
+
+@pytest.mark.parametrize(
+    "id_caso,campo,valor",
+    [
+        ("PRD-N18", "preco", -1),
+        ("PRD-N19", "unidade_estoque", -1),
+        ("PRD-N20", "nome", "   "),
+    ],
+)
+def test_prd_edicao_negativa_do_plano(app, client, id_caso, campo, valor):
+    """Cobre PRD-N18/N19/N20 do PDF."""
+    id_cat = _categoria(app, _logar(client))
+    criado = client.post(
+        "/api/produtos", json=_payload(id_cat, sku=f"ED-{id_caso}")
+    ).get_json()["dados"]
+
+    resposta = client.patch(
+        f"/api/produtos/{criado['id_produto']}", json={campo: valor}
+    )
+
+    assert resposta.status_code == 422, (id_caso, resposta.get_json())
+    assert campo in resposta.get_json()["campos"], (id_caso, resposta.get_json())
+
+
+def test_prd_p07_mesmo_sku_em_empresas_diferentes(app, client):
+    """PRD-P07: mesmo SKU de produto de outra empresa é aceito."""
+    primeira = _categoria(app, _logar(client, email="prd.p07.a@exemplo.com.br"))
+    resposta_a = client.post(
+        "/api/produtos", json=_payload(primeira, sku="PRD-P07-SKU")
+    )
+    assert resposta_a.status_code == 201
+
+    segunda = _categoria(
+        app,
+        _logar(
+            client,
+            email="prd.p07.b@exemplo.com.br",
+            cnpj=CNPJ_VALIDO_2,
+        ),
+    )
+    resposta_b = client.post(
+        "/api/produtos", json=_payload(segunda, sku="PRD-P07-SKU")
+    )
+    assert resposta_b.status_code == 201, resposta_b.get_json()
+
+
+def test_prd_p09_alterar_nome_do_produto(app, client):
+    """PRD-P09: alterar o nome de um produto."""
+    id_cat = _categoria(app, _logar(client))
+    criado = client.post(
+        "/api/produtos", json=_payload(id_cat, sku="PRD-P09")
+    ).get_json()["dados"]
+
+    resposta = client.patch(
+        f"/api/produtos/{criado['id_produto']}", json={"nome": "Produto Renomeado"}
+    )
+
+    assert resposta.status_code == 200
+    assert resposta.get_json()["dados"]["nome"] == "Produto Renomeado"
+
+
+def test_prd_p10_alterar_preco_do_produto(app, client):
+    """PRD-P10: alterar o preço de um produto."""
+    id_cat = _categoria(app, _logar(client))
+    criado = client.post(
+        "/api/produtos", json=_payload(id_cat, sku="PRD-P10")
+    ).get_json()["dados"]
+
+    resposta = client.patch(
+        f"/api/produtos/{criado['id_produto']}", json={"preco": 9.99}
+    )
+
+    assert resposta.status_code == 200
+    assert resposta.get_json()["dados"]["preco"] == "9.99"
+
+
+def test_seg_p01_listar_produtos_somente_da_propria_empresa(app, client):
+    """SEG-P01: lista de produtos mostra apenas os da empresa logada."""
+    cat_a = _categoria(app, _logar(client))
+    produto_a = client.post(
+        "/api/produtos",
+        json=_payload(cat_a, sku="SEG-P01-A", nome="Produto SEG P01 A"),
+    ).get_json()["dados"]
+
+    outro = app.test_client()
+    cat_b = _categoria(
+        app,
+        _logar(outro, email="seg.p01.b@exemplo.com.br", cnpj=CNPJ_VALIDO_2),
+    )
+    produto_b = outro.post(
+        "/api/produtos",
+        json=_payload(cat_b, sku="SEG-P01-B", nome="Produto SEG P01 B"),
+    ).get_json()["dados"]
+
+    nomes_a = [
+        p["nome"] for p in client.get("/api/produtos").get_json()["dados"]["produtos"]
+    ]
+    nomes_b = [
+        p["nome"] for p in outro.get("/api/produtos").get_json()["dados"]["produtos"]
+    ]
+    assert produto_a["nome"] in nomes_a
+    assert produto_b["nome"] not in nomes_a
+    assert produto_b["nome"] in nomes_b
+
+
+def test_seg_n01_acessar_produto_de_outra_empresa_por_id(app, client):
+    """SEG-N01: produto de outra empresa por identificador direto responde 404."""
+    cat_a = _categoria(app, _logar(client))
+    produto = client.post(
+        "/api/produtos", json=_payload(cat_a, sku="SEG-N01-A")
+    ).get_json()["dados"]
+
+    outro = app.test_client()
+    _logar(outro, email="seg.n01.b@exemplo.com.br", cnpj=CNPJ_VALIDO_2)
+
+    assert outro.get(f"/api/produtos/{produto['id_produto']}").status_code == 404
+
+
+def test_seg_n15_xss_no_nome_do_produto_fica_como_texto(app, client):
+    """SEG-N15: payload de XSS no nome é aceito como texto JSON (front escapa)."""
+    cat = _categoria(app, _logar(client))
+    nome = "<script>alert('xss')</script>"
+    dados = client.post(
+        "/api/produtos", json=_payload(cat, sku="SEG-N15", nome=nome)
+    ).get_json()["dados"]
+
+    assert dados["nome"] == nome
+    assert client.get(f"/api/produtos/{dados['id_produto']}").is_json
