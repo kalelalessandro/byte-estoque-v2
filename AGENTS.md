@@ -18,9 +18,8 @@ Sistema SaaS multi-tenant de **CRM, Controle de Estoque e Gestão Financeira** (
   - ✅ Módulo de Parceiros e Interações implementado (clientes/fornecedores, CRUD multi-tenant, histórico de contatos + testes PAR/INT + tela no front-end).
   - ✅ Módulos Financeiro e Caixa implementados (Caixas, Movimentos de Caixa, Títulos Financeiros e Baixas Financeiras + telas no front-end).
   - ✅ Módulo de Operações implementado (vendas/compras, estoque, títulos 1x/parcelados, edição, cancelamento + testes).
-  - ⏳ **Pendências Finais (Foco Atual):**
-    1. **Módulo de Gestão de Usuários / Funcionários** (criação de novas contas na mesma empresa, listagem e exclusão com regra de hierarquia Dono vs. Funcionário).
-    2. **testes do módulo de usuários.**
+  - ✅ Módulo de Gestão de Usuários/Funcionários implementado (cargos Dono/Funcionário, CRUD, permissões de exclusão e isolamento + testes).
+  - ✅ Módulos finalizados: autenticação, produtos/categorias, parceiros/interações, financeiro/caixa, operações e usuários.
 
 ---
 

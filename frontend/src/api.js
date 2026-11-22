@@ -248,6 +248,19 @@ export const api = {
         method: 'POST',
       }),
   },
+
+  usuarios: {
+    listar: () => requisitar('/api/usuarios'),
+    criar: (dados) =>
+      requisitar('/api/usuarios', { method: 'POST', corpo: dados }),
+    editar: (idUsuario, dados) =>
+      requisitar(`/api/usuarios/${idUsuario}`, {
+        method: 'PATCH',
+        corpo: dados,
+      }),
+    excluir: (idUsuario) =>
+      requisitar(`/api/usuarios/${idUsuario}`, { method: 'DELETE' }),
+  },
 }
 
 /** Junta a mensagem geral com os erros por campo (quando existirem). */

@@ -93,6 +93,10 @@ o `uv.lock` deve ser versionado no Git.
 | GET | `/api/operacoes/<id>` | **sim** | Detalhe da operação, itens e títulos gerados |
 | PATCH | `/api/operacoes/<id>` | **sim** | Altera operação concluída, refazendo estoque e títulos atomicamente |
 | POST | `/api/operacoes/<id>/cancelar` | **sim** | Cancela operação, estorna estoque e cancela títulos sem baixas |
+| GET | `/api/usuarios` | **sim** | Lista dono e funcionários da empresa |
+| POST | `/api/usuarios` | **sim** | Cria funcionário vinculado à empresa (cargo Funcionario) |
+| PATCH | `/api/usuarios/<id>` | **sim** | Atualiza nome, e-mail, telefone e/ou senha (funcionário não altera o Dono) |
+| DELETE | `/api/usuarios/<id>` | **sim** | Exclui funcionário; bloqueia dono, própria conta e histórico vinculado |
 | GET | `/api/titulos` | **sim** | Lista títulos (`busca`, `tipo`, `situacao`, `id_parceiro`, `limit`, `offset`) |
 | GET | `/api/titulos/<id>` | **sim** | Consulta título: saldo, situação, parceiro e histórico de baixas |
 | POST | `/api/titulos` | **sim** | Registra título manualmente (em aberto, sem baixas) |
@@ -372,7 +376,7 @@ uv run pytest tests/test_parceiros.py
 uv run pytest tests/test_interacoes.py
 ```
 
-Resultado esperado: **373 passed, 4 skipped, 1 xfailed** (3 skips de UI/E2E da
+Resultado esperado: **387 passed, 4 skipped, 1 xfailed** (3 skips de UI/E2E da
 autenticação + PRD-N22 de confirmação visual; o xfail é o LOG-P08, impossível
 pelo schema `usuarios.id_empresa NOT NULL`; veja
 [tests/README.md](tests/README.md)).

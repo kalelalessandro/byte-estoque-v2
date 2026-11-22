@@ -31,6 +31,7 @@ from .modules.operations import bp as bp_operacoes
 from .modules.partners import bp as bp_parceiros
 from .modules.products import bp as bp_produtos
 from .modules.titulos import bp as bp_titulos
+from .modules.users import bp as bp_usuarios
 
 # app/__init__.py -> app -> src -> backend -> raiz do projeto
 RAIZ_PROJETO = Path(__file__).resolve().parents[3]
@@ -132,6 +133,7 @@ def registrar_blueprints(app: Flask) -> None:
     app.register_blueprint(bp_titulos, url_prefix="/api/titulos")
     app.register_blueprint(bp_caixas, url_prefix="/api/caixas")
     app.register_blueprint(bp_operacoes, url_prefix="/api/operacoes")
+    app.register_blueprint(bp_usuarios, url_prefix="/api/usuarios")
 
 
 def registrar_rotas_basicas(app: Flask) -> None:
@@ -141,7 +143,7 @@ def registrar_rotas_basicas(app: Flask) -> None:
             {
                 "ok": True,
                 "api": "Byte Estoque",
-                "descricao": "API de autenticação, dashboard, categorias, produtos e parceiros.",
+                "descricao": "API de autenticação, dashboard, categorias, produtos, parceiros, financeiro, operações e usuários.",
                 "rotas": {
                     "health": "GET /api/health",
                     "cadastro": "POST /api/auth/cadastro",
@@ -181,6 +183,9 @@ def registrar_rotas_basicas(app: Flask) -> None:
                     "operacoes": (
                         "GET/POST /api/operacoes, GET/PATCH /api/operacoes/<id>, "
                         "POST /api/operacoes/<id>/cancelar"
+                    ),
+                    "usuarios": (
+                        "GET/POST /api/usuarios, PATCH/DELETE /api/usuarios/<id>"
                     ),
                 },
             }
