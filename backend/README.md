@@ -64,7 +64,7 @@ o `uv.lock` deve ser versionado no Git.
 | POST | `/api/auth/login` | não | Autentica e cria a sessão |
 | POST | `/api/auth/logout` | não | Encerra a sessão |
 | GET | `/api/auth/me` | **sim** | Dados do usuário logado |
-| GET | `/api/dashboard/resumo` | **sim** | Resumo agregado: produtos, categorias, parceiros, valor em estoque e `dinheiro` (valor contado no último caixa fechado) |
+| GET | `/api/dashboard/resumo` | **sim** | Resumo agregado: produtos, categorias, parceiros, valor em estoque e `dinheiro` (saldo geral do último caixa fechado: contado + Pix + cartão) |
 | POST | `/api/categorias` | **sim** | Cria uma categoria |
 | GET | `/api/categorias` | **sim** | Lista as categorias da empresa |
 | PATCH | `/api/categorias/<id>` | **sim** | Renomeia uma categoria |
@@ -115,8 +115,12 @@ Sessão de caixa (`caixas`) com movimentos adicionais (`operacoes_caixa`). Regra
   do servidor, nunca do JSON.
 - **Saldo esperado em dinheiro** = abertura + suprimentos − sangrias + recebimentos em
   dinheiro − pagamentos em dinheiro (as baixas vêm de `baixas_financeiras`). **Pix e cartão
-  não alteram o dinheiro**: aparecem em linhas separadas (`por_forma`). Nada é contado em
-  dobro (baixas e movimentos ficam em tabelas diferentes).
+  não entram na contagem da gaveta**: aparecem em linhas separadas (`por_forma`). Nada é
+  contado em dobro (baixas e movimentos ficam em tabelas diferentes).
+- **Saldo geral** (`saldo_geral`) = dinheiro do caixa + líquido de Pix + líquido de cartão
+  (recebimentos − pagamentos). O dinheiro é o saldo esperado com o caixa aberto e o
+  `valor_contado` depois do fechamento. **Pix e cartão alteram o saldo geral.** A página
+  Caixas mostra o saldo geral no detalhe e no histórico.
 - Fechamento: `diferenca` = contado − esperado (negativa = faltou dinheiro). Caixa fechado
   não aceita lançamentos, novas baixas nem novo fechamento (409; data/hora e valor contado
   originais são mantidos).
@@ -127,8 +131,9 @@ Sessão de caixa (`caixas`) com movimentos adicionais (`operacoes_caixa`). Regra
   empresa → título → caixa.
 - `GET /api/caixas/<id>` traz o `extrato`: baixas (com parceiro) e suprimentos/sangrias.
 - **Dashboard:** `GET /api/dashboard/resumo` devolve `dinheiro` = `{ valor, id_caixa, fechado_em }`
-  do **último caixa fechado** da empresa (o `valor_contado`, não o esperado), ou `null` até o
-  primeiro fechamento. Caixa ainda aberto não conta: o dinheiro só é confirmado na contagem.
+  do **último caixa fechado** da empresa, onde `valor` é o `saldo_geral` desse caixa (valor
+  contado + Pix + cartão), ou `null` até o primeiro fechamento. Caixa ainda aberto não conta:
+  o dinheiro só é confirmado na contagem.
   O card "Dinheiro" do Início mostra esse valor assim que o caixa fecha (qualquer escrita limpa
   o cache do front-end) e leva ao Financeiro, na aba Caixas.
 
@@ -143,7 +148,8 @@ v1.2 e plano de testes TIT/SEG):
   empresa vem da sessão.
 - O parceiro precisa ser da mesma empresa. A operação também; se ela tem parceiro, o título
   deve ter o **mesmo** parceiro (se o título não informar, herda o da operação).
-- Título sem parceiro é permitido no cadastro, mas **não aceita baixa** (toda baixa tem
+- Título sem parceiro é permitido pela API, mas **a tela não deixa criar**: o formulário exige
+  o parceiro (sem a opção "Sem parceiro"). Título sem parceiro **não aceita baixa** (toda baixa tem
   parceiro); a resposta traz `pode_baixar` e `motivo_sem_baixa` para a tela explicar.
 - Situação: `aberto`, `parcial`, `quitado` ou `cancelado`; `saldo_pendente` = valor − baixas.
 - `GET /api/titulos/<id>` inclui `baixas` (histórico, mais recentes primeiro).
@@ -361,7 +367,7 @@ uv run pytest tests/test_parceiros.py
 uv run pytest tests/test_interacoes.py
 ```
 
-Resultado esperado: **358 passed, 4 skipped, 1 xfailed** (3 skips de UI/E2E da
+Resultado esperado: **362 passed, 4 skipped, 1 xfailed** (3 skips de UI/E2E da
 autenticação + PRD-N22 de confirmação visual; o xfail é o LOG-P08, impossível
 pelo schema `usuarios.id_empresa NOT NULL`; veja
 [tests/README.md](tests/README.md)).

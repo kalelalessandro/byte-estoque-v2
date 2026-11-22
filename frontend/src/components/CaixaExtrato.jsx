@@ -1,6 +1,6 @@
 /**
  * Extrato do caixa: todas as baixas (com o parceiro) e os suprimentos/sangrias da sessão,
- * mais recentes primeiro. Pix e cartão aparecem, mas não alteram o dinheiro em caixa.
+ * mais recentes primeiro. Pix e cartão alteram o saldo geral, mas ficam fora da contagem do dinheiro.
  */
 import { formatarDataHora, formatarMoeda } from '../formatos'
 
@@ -45,7 +45,7 @@ export default function CaixaExtrato({ extrato }) {
               <td>
                 {item.forma_pagamento}{' '}
                 {!item.afeta_dinheiro ? (
-                  <span className="badge">não altera o dinheiro</span>
+                  <span className="badge">fora da contagem do dinheiro</span>
                 ) : null}
               </td>
               <td

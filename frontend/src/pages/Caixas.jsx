@@ -168,6 +168,7 @@ export default function Caixas() {
                   <th>Esperado</th>
                   <th>Contado</th>
                   <th>Diferença</th>
+                  <th>Saldo geral</th>
                   <th aria-label="Ações" />
                 </tr>
               </thead>
@@ -191,6 +192,7 @@ export default function Caixas() {
                     <td className={`valor ${classeDiferenca(caixa.diferenca)}`}>
                       {formatarMoeda(caixa.diferenca)}
                     </td>
+                    <td>{formatarMoeda(caixa.saldo_geral)}</td>
                     <td>
                       <div className="tabela__acoes">
                         <button

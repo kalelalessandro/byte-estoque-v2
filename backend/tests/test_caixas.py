@@ -556,3 +556,58 @@ def test_movimento_espera_o_fechamento_e_e_recusado(app, client):
     thread.join(timeout=10)
     assert resultado["status"] == 409
     assert _obter(client, caixa)["extrato"] == []
+
+
+# ---------------------------------------------------------------------------
+# Saldo geral (dinheiro + Pix + cartão) e limpeza do contador de ids
+# ---------------------------------------------------------------------------
+
+
+def test_pix_e_cartao_alteram_o_saldo_geral_do_caixa(app, client):
+    conta = logar(client)
+    caixa = _abrir(client, "100.00")
+    id_caixa = caixa["id_caixa"]
+    _com_baixa(app, client, conta, id_caixa, tipo="a receber", valor="50.00", forma="dinheiro")
+    _com_baixa(app, client, conta, id_caixa, tipo="a receber", valor="90.00", forma="Pix")
+    _com_baixa(app, client, conta, id_caixa, tipo="a receber", valor="40.00", forma="cartão")
+    _com_baixa(app, client, conta, id_caixa, tipo="a pagar", valor="30.00", forma="Pix")
+
+    dados = _obter(client, id_caixa)
+
+    assert dados["saldo_esperado_dinheiro"] == "150.00"  # gaveta: 100 + 50
+    assert dados["saldo_geral"] == "250.00"  # 150 + (90 - 30) + 40
+
+
+def test_saldo_geral_do_caixa_fechado_usa_o_valor_contado(app, client):
+    conta = logar(client)
+    id_caixa = _abrir(client, "100.00")["id_caixa"]
+    _com_baixa(app, client, conta, id_caixa, tipo="a receber", valor="70.00", forma="Pix")
+
+    fechado = client.post(f"/api/caixas/{id_caixa}/fechar", json={"valor_contado": "95.00"})
+
+    dados = fechado.get_json()["dados"]
+    assert dados["saldo_esperado_dinheiro"] == "100.00"
+    assert dados["saldo_geral"] == "165.00"  # contado 95 + Pix 70
+    assert _obter(client, id_caixa)["saldo_geral"] == "165.00"
+
+
+def test_apos_a_limpeza_o_proximo_caixa_nao_herda_o_contador_dos_testes(app, client):
+    logar(client)
+    for _ in range(3):
+        id_caixa = _abrir(client)["id_caixa"]
+        client.post(f"/api/caixas/{id_caixa}/fechar", json={"valor_contado": "0"})
+
+    apagar_dados_de_baixas(app)
+
+    with app.app_context(), get_engine().connect() as conexao:
+        # O MySQL 8 guarda estatísticas em cache; sem isso o contador lido pode estar velho.
+        conexao.execute(text("SET SESSION information_schema_stats_expiry = 0"))
+        proximo = conexao.execute(
+            text(
+                "SELECT AUTO_INCREMENT FROM information_schema.TABLES "
+                "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'caixas'"
+            )
+        ).scalar()
+        maior = conexao.execute(text("SELECT COALESCE(MAX(id_caixa), 0) FROM caixas")).scalar()
+    # Sem caixas de demonstração o contador volta a 1; com elas, fica em MAX(id) + 1.
+    assert proximo == maior + 1

@@ -8,6 +8,7 @@ reaproveita a limpeza de parceiros, antes de o ``banco_limpo`` remover usuários
 from __future__ import annotations
 
 from sqlalchemy import bindparam, text
+from sqlalchemy.exc import OperationalError
 
 from src.app.db import get_engine
 from tests.apoio_parceiros import (
@@ -102,8 +103,29 @@ def contar_baixas(app, id_titulo: int) -> int:
         ).scalar()
 
 
+def _zerar_contador_dos_caixas(app) -> None:
+    """Devolve o AUTO_INCREMENT de ``caixas`` e ``operacoes_caixa`` ao menor valor possível.
+
+    Apagar as linhas não volta o contador: depois de uma suíte com 89 caixas, o primeiro caixa
+    real abriria como \"#90\". ``AUTO_INCREMENT = 1`` faz o MySQL usar MAX(id) + 1 (ou 1 com a
+    tabela vazia), então caixas e movimentos que já existiam no banco nunca são afetados.
+    É ajuste de contador, não mudança de schema. Se outra conexão segurar a tabela, desiste
+    depois de alguns segundos em vez de travar a suíte.
+    """
+    with app.app_context(), get_engine().connect() as conexao:
+        conexao.execute(text("SET SESSION lock_wait_timeout = 5"))
+        for tabela in ("operacoes_caixa", "caixas"):
+            try:
+                conexao.execute(text(f"ALTER TABLE {tabela} AUTO_INCREMENT = 1"))
+            except OperationalError:
+                pass  # limpeza de contador é só cosmética: não derruba o teste
+
+
 def apagar_dados_de_baixas(app) -> None:
-    """Apaga baixas, títulos e caixas das empresas de teste e depois os parceiros."""
+    """Apaga baixas, títulos e caixas das empresas de teste e depois os parceiros.
+
+    Depois de apagar, zera o contador de ids dos caixas (veja ``_zerar_contador_dos_caixas``).
+    """
     if not EMPRESAS_COM_PARCEIROS:
         return
 
@@ -121,4 +143,5 @@ def apagar_dados_de_baixas(app) -> None:
             conexao.execute(
                 text(consulta).bindparams(bindparam("ids", expanding=True)), {"ids": ids}
             )
+    _zerar_contador_dos_caixas(app)
     apagar_dados_de_parceiros(app)

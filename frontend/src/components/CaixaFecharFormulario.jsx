@@ -44,7 +44,8 @@ export default function CaixaFecharFormulario({ caixa, aoFechar, aoFechado }) {
         <p className="guia__ajuda">
           Saldo esperado em dinheiro:{' '}
           <strong>{formatarMoeda(caixa.saldo_esperado_dinheiro)}</strong>. Conte o dinheiro
-          do caixa e informe o valor abaixo. Pix e cartão não entram na contagem.
+          do caixa e informe o valor abaixo. Pix e cartão não entram na contagem, mas somam no
+          saldo geral do caixa ({formatarMoeda(caixa.saldo_geral)} com o dinheiro esperado).
         </p>
 
         <div className="campo">

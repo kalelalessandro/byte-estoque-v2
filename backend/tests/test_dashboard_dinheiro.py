@@ -1,7 +1,8 @@
 """Testes do card "Dinheiro" do dashboard, ligado ao módulo de Caixa.
 
-O dinheiro mostrado é o valor CONTADO no último caixa fechado da empresa: aparece assim que
-o caixa fecha; caixa aberto não conta; cada empresa vê só o seu.
+O dinheiro mostrado é o SALDO GERAL do último caixa fechado da empresa (valor contado +
+líquido de Pix e cartão): aparece assim que o caixa fecha; caixa aberto não conta; cada
+empresa vê só o seu.
 """
 
 from __future__ import annotations
@@ -93,3 +94,25 @@ def test_cada_empresa_ve_apenas_o_seu_dinheiro(app, client):
     _fechar(outro, _abrir(outro, "99.00"), "99.00")
     assert _dinheiro(outro)["valor"] == "99.00"
     assert _dinheiro(client)["valor"] == "10.00"
+
+
+def test_pix_e_cartao_do_caixa_fechado_somam_no_dinheiro_do_dashboard(app, client):
+    from tests.apoio_baixas import inserir_baixa, inserir_titulo
+    from tests.apoio_parceiros import criar_parceiro
+
+    conta = logar(client)
+    id_parceiro = criar_parceiro(client)["id_parceiro"]
+    id_caixa = _abrir(client, "100.00")
+    receber = inserir_titulo(app, conta["id_empresa"], id_parceiro, tipo="a receber", valor="500.00")
+    pagar = inserir_titulo(app, conta["id_empresa"], id_parceiro, tipo="a pagar", valor="80.00")
+    inserir_baixa(app, receber, id_caixa, "200.00", forma="Pix")
+    inserir_baixa(app, receber, id_caixa, "50.00", forma="cartão")
+    inserir_baixa(app, pagar, id_caixa, "30.00", forma="Pix")
+
+    assert _dinheiro(client) is None  # caixa ainda aberto não conta
+
+    fechado = _fechar(client, id_caixa, "100.00")
+
+    # Saldo geral = contado (100) + Pix (200 - 30) + cartão (50).
+    assert fechado["saldo_geral"] == "320.00"
+    assert _dinheiro(client)["valor"] == "320.00"

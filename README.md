@@ -62,7 +62,7 @@ de sessão funciona sem configuração extra de CORS.
 
 1. Clique em **Criar conta** e cadastre a empresa + o usuário.
 2. Você entra no **Início**, com o resumo de produtos, categorias, parceiros, o dinheiro do
-   último caixa fechado (o card leva ao Financeiro, aba Caixas) e
+   último caixa fechado (saldo geral com Pix e cartão; o card leva ao Financeiro, aba Caixas) e
    valor em estoque.
 3. Use a sidebar para gerenciar **Produtos** (criar, editar, excluir, buscar),
    **Categorias** (criar, renomear, excluir categorias sem produtos) e
@@ -83,7 +83,7 @@ cd backend
 uv run pytest
 ```
 
-Resultado esperado: **358 passed, 4 skipped, 1 xfailed**.
+Resultado esperado: **362 passed, 4 skipped, 1 xfailed**.
 
 > Os testes usam um hash de senha rápido (`PBKDF2`) **somente no ambiente de
 > teste**, para não gastar ~1 s por conta criada. Em produção o hash continua

@@ -1,7 +1,8 @@
 /**
  * Valores de uma sessão de caixa: abertura, suprimentos, sangrias, saldo esperado em
- * dinheiro e, com o caixa fechado, o valor contado e a diferença. Embaixo, as linhas de
- * dinheiro, Pix e cartão: só o dinheiro altera o saldo físico do caixa.
+ * dinheiro e, com o caixa fechado, o valor contado e a diferença. O saldo geral soma o
+ * dinheiro (contado, se fechado) com o líquido de Pix e cartão. Embaixo, as linhas de
+ * dinheiro, Pix e cartão: todas alteram o saldo geral; só o dinheiro entra na contagem.
  */
 import { formatarMoeda } from '../formatos'
 
@@ -36,6 +37,10 @@ export default function CaixaValores({ caixa }) {
           <span>Saldo esperado em dinheiro</span>
           <strong>{formatarMoeda(caixa.saldo_esperado_dinheiro)}</strong>
         </div>
+        <div className="cartao-valor cartao-valor--destaque">
+          <span>Saldo geral (dinheiro + Pix + cartão)</span>
+          <strong>{formatarMoeda(caixa.saldo_geral)}</strong>
+        </div>
         {fechado ? (
           <>
             <div className="cartao-valor">
@@ -66,7 +71,7 @@ export default function CaixaValores({ caixa }) {
                 <td>
                   {ROTULO_FORMA[linha.forma] || linha.forma}{' '}
                   {!linha.afeta_dinheiro ? (
-                    <span className="badge">não altera o dinheiro</span>
+                    <span className="badge">fora da contagem do dinheiro</span>
                   ) : null}
                 </td>
                 <td>{formatarMoeda(linha.recebimentos)}</td>

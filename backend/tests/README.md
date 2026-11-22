@@ -34,7 +34,7 @@ Docker, sem mock, usando o `test_client` do Flask.
 - **1 extra** de configuração: hash padrão do cadastro nunca fica `None`
   (`test_config.py`)
 - Limpeza automática dos dados criados, antes e depois de cada teste
-- Resultado atual da suíte: **358 passed, 4 skipped, 1 xfailed**
+- Resultado atual da suíte: **362 passed, 4 skipped, 1 xfailed**
 
 ---
 
@@ -78,12 +78,12 @@ uv run pytest -k "LOG-N"       # filtra por ID
 | PRD — Produtos | PRD-P01..P13, PRD-N01..N22 | `test_produtos.py` | 35 (34 + 1 skip) + extras |
 | PAR — Parceiros | PAR-P01..P14, PAR-N01..N21 | `test_parceiros.py` | 35 + extras |
 | INT — Interações | INT-P01..P07, INT-N01..N07 | `test_interacoes.py` | 14 + extras |
-| CXA — Caixa | CXA-P01..P13, CXA-N01..N16 (+ CON-N04, SEG) | `test_caixas.py` | 29 + extras |
+| CXA — Caixa | CXA-P01..P13, CXA-N01..N16 (+ CON-N04, SEG) | `test_caixas.py` | 32 + extras |
 | TIT — Títulos financeiros | TIT-P01..P11, TIT-N01..N14 (+ SEG-N06/N09) | `test_titulos.py` | 25 + extras |
 | BAI — Baixas financeiras | BAI-P01..P08, BAI-N01..N13 (+ SEG-N07/N08, CON-N03/N04) | `test_baixas.py` | 21 + extras |
 | Fluxo/transação (extras, fora do plano) | contexto de empresa, sinal defensivo e rollback atômico | `test_fluxo_empresa.py` | 4 |
 | Dashboard (extras, performance) | `GET /api/dashboard/resumo`: contagens (produtos, categorias, parceiros) + valor em estoque no banco, isolamento por empresa, 401 | `test_dashboard.py` | 3 |
-| Dashboard — Dinheiro (extras) | `dinheiro` = valor contado no último caixa fechado: nulo sem fechamento, caixa aberto não conta, aparece ao fechar, o mais recente vence, zero é zero, isolamento por empresa | `test_dashboard_dinheiro.py` | 6 |
+| Dashboard — Dinheiro (extras) | `dinheiro` = saldo geral (contado + Pix + cartão) do último caixa fechado: nulo sem fechamento, caixa aberto não conta, aparece ao fechar, o mais recente vence, zero é zero, isolamento por empresa, Pix/cartão somam | `test_dashboard_dinheiro.py` | 7 |
 | Configuração (extra, regressão) | hash de senha padrão do cadastro é válido (nunca `None`) | `test_config.py` | 1 |
 
 Os IDs dos casos aparecem no nome de cada teste (ex.:

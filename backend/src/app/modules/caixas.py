@@ -17,8 +17,12 @@ Regras (Documentação do Banco v1.2 e plano de testes, módulos CXA/CON/SEG):
 - **Um caixa aberto por empresa** (o fluxo abre "o" caixa; as baixas usam o caixa aberto).
   Aberturas simultâneas são serializadas travando a linha da empresa.
 - **Saldo esperado em dinheiro** = abertura + suprimentos − sangrias + recebimentos em
-  dinheiro − pagamentos em dinheiro. Baixas via Pix e cartão NÃO mexem no dinheiro físico:
-  aparecem em linhas separadas (``por_forma``). Pagamentos e recebimentos vêm de
+  dinheiro − pagamentos em dinheiro. Baixas via Pix e cartão NÃO mexem no dinheiro físico
+  (não entram na contagem da gaveta): aparecem em linhas separadas (``por_forma``).
+- **Saldo geral** (``saldo_geral``) = dinheiro do caixa + líquido de Pix + líquido de cartão.
+  Com o caixa aberto, o dinheiro é o saldo esperado; com o caixa fechado, é o valor contado.
+  Pix e cartão alteram este saldo; é ele que o card "Dinheiro" do dashboard mostra.
+  Pagamentos e recebimentos vêm de
   ``baixas_financeiras``; suprimentos e sangrias de ``operacoes_caixa`` (o mesmo evento
   nunca está nas duas, então nada é contado em dobro).
 - Fechamento: informa o ``valor_contado``; ``diferenca`` = contado − esperado (negativa =
@@ -179,6 +183,15 @@ def _resumos(caixas: list[Caixa], *, travar: bool = False) -> dict[int, dict]:
             + em_dinheiro["recebimentos"]
             - em_dinheiro["pagamentos"]
         )
+        # Pix e cartão: não entram na gaveta, mas fazem parte do saldo geral do caixa.
+        resumo["liquido_outras_formas"] = sum(
+            (
+                valores["recebimentos"] - valores["pagamentos"]
+                for forma, valores in resumo["formas"].items()
+                if forma != "dinheiro"
+            ),
+            ZERO,
+        )
     return resumos
 
 
@@ -186,9 +199,11 @@ def serializar_caixa(caixa: Caixa, aberto_por: str | None, resumo: dict) -> dict
     """Caixa -> dict JSON, com os valores calculados.
 
     ``diferenca`` (só com o caixa fechado) = valor contado − saldo esperado em dinheiro.
+    ``saldo_geral`` = dinheiro (esperado, ou contado se já fechado) + líquido de Pix e cartão.
     """
     esperado = resumo["saldo_esperado_dinheiro"]
     fechado = caixa.fechado_em is not None
+    dinheiro_em_caixa = caixa.valor_contado if fechado else esperado
     return {
         "id_caixa": caixa.id_caixa,
         "aberto_por": aberto_por,
@@ -199,9 +214,11 @@ def serializar_caixa(caixa: Caixa, aberto_por: str | None, resumo: dict) -> dict
         "suprimentos": dinheiro(resumo["suprimentos"]),
         "sangrias": dinheiro(resumo["sangrias"]),
         "saldo_esperado_dinheiro": dinheiro(esperado),
+        "saldo_geral": dinheiro(dinheiro_em_caixa + resumo["liquido_outras_formas"]),
         "valor_contado": dinheiro(caixa.valor_contado) if fechado else None,
         "diferenca": dinheiro(caixa.valor_contado - esperado) if fechado else None,
-        # Linhas de dinheiro, Pix e cartão. Só o dinheiro altera o saldo físico.
+        # Linhas de dinheiro, Pix e cartão. Todas entram no saldo geral; só o dinheiro
+        # entra na contagem da gaveta (``afeta_dinheiro``).
         "por_forma": [
             {
                 "forma": forma,

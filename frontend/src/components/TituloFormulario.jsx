@@ -1,5 +1,9 @@
 /**
- * "Registrar Título Manualmente": tipo, parceiro (opcional), valor, vencimento e descrição.
+ * "Registrar Título Manualmente": tipo, parceiro (obrigatório), valor, vencimento e descrição.
+ *
+ * Na tela não é possível gerar título sem parceiro: o campo é obrigatório, não existe a opção
+ * "Sem parceiro" e o envio é bloqueado aqui antes de chamar a API. Sem parceiros cadastrados,
+ * o formulário avisa para cadastrar um na página Parceiros.
  *
  * Ao escolher um parceiro, o Guia lista as interações dele (contratos, compras, reembolsos,
  * pagamentos). A descrição de cada interação normalmente traz o valor e os detalhes do
@@ -69,9 +73,15 @@ export default function TituloFormulario({ aoFechar, aoSalvo }) {
     setErroGeral('')
     setErros({})
 
+    if (formulario.id_parceiro === '') {
+      setErros({ id_parceiro: 'Selecione o parceiro do título.' })
+      setErroGeral('Todo título precisa de um parceiro.')
+      return
+    }
+
     const dados = {
       tipo: formulario.tipo,
-      id_parceiro: formulario.id_parceiro === '' ? null : Number(formulario.id_parceiro),
+      id_parceiro: Number(formulario.id_parceiro),
       valor: formulario.valor,
       vencimento: formulario.vencimento,
       descricao: formulario.descricao,
@@ -112,13 +122,13 @@ export default function TituloFormulario({ aoFechar, aoSalvo }) {
           </div>
 
           <div className="campo">
-            <label htmlFor="titulo-parceiro">Parceiro</label>
+            <label htmlFor="titulo-parceiro">Parceiro *</label>
             <select
               id="titulo-parceiro"
               value={formulario.id_parceiro}
               onChange={(evento) => alterar('id_parceiro', evento.target.value)}
             >
-              <option value="">Sem parceiro</option>
+              <option value="">Selecione o parceiro</option>
               {parceiros.map((item) => (
                 <option key={item.id_parceiro} value={item.id_parceiro}>
                   {item.nome} ({ROTULO_TIPO_PARCEIRO[item.tipo]})
@@ -170,9 +180,9 @@ export default function TituloFormulario({ aoFechar, aoSalvo }) {
 
         {!parceiro ? (
           <p className="guia__ajuda">
-            Escolha um parceiro para ver, no guia, as interações dele (contratos, compras,
-            reembolsos e pagamentos) e preencher o título a partir delas. Sem parceiro, o
-            título não poderá receber baixa.
+            {parceiros.length === 0
+              ? 'Nenhum parceiro cadastrado. Cadastre um parceiro na página Parceiros antes de registrar o título.'
+              : 'Escolha o parceiro (obrigatório) para ver, no guia, as interações dele (contratos, compras, reembolsos e pagamentos) e preencher o título a partir delas.'}
           </p>
         ) : (
           <GuiaInteracoes

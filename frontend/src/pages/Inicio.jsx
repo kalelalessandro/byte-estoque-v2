@@ -1,8 +1,8 @@
 /**
  * Dashboard inicial do sistema autenticado.
  *
- * O card "Dinheiro" vem do Caixa: mostra o valor contado no último caixa fechado (aparece
- * assim que o caixa fecha) e leva ao Financeiro, na aba Caixas.
+ * O card "Dinheiro" vem do Caixa: mostra o saldo geral (dinheiro contado + Pix + cartão) do
+ * último caixa fechado (aparece assim que o caixa fecha) e leva ao Financeiro, na aba Caixas.
  */
 import { useEffect, useState } from 'react'
 import { api, mensagemDeErro } from '../api'
@@ -78,7 +78,7 @@ export default function Inicio({ usuario, aoNavegar }) {
         ? MOEDA.format(Number(estado.dados.dinheiro.valor))
         : '—',
       detalhe: estado.dados.dinheiro
-        ? `contado no caixa #${estado.dados.dinheiro.id_caixa} · ${formatarDataHora(estado.dados.dinheiro.fechado_em)}`
+        ? `saldo geral do caixa #${estado.dados.dinheiro.id_caixa} · ${formatarDataHora(estado.dados.dinheiro.fechado_em)}`
         : 'nenhum caixa fechado ainda',
       icone: 'dinheiro',
       acao: () => aoNavegar('financeiro', { aba: 'caixas' }),

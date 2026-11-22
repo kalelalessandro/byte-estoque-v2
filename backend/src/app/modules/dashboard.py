@@ -3,9 +3,10 @@
 Em vez de o frontend baixar todos os produtos e categorias para calcular
 contagens e valor em estoque, o MySQL faz a agregação em uma única consulta.
 
-O card **Dinheiro** vem do módulo de Caixa: é o valor CONTADO no último caixa fechado da
-empresa. Ele aparece no dashboard assim que o caixa fecha; caixa ainda aberto não conta (o
-dinheiro só é confirmado na contagem do fechamento).
+O card **Dinheiro** vem do módulo de Caixa: é o SALDO GERAL do último caixa fechado da empresa
+(dinheiro contado + líquido de Pix e cartão, o mesmo ``saldo_geral`` da página Caixas). Ele
+aparece no dashboard assim que o caixa fecha; caixa ainda aberto não conta (o dinheiro só é
+confirmado na contagem do fechamento).
 """
 
 from __future__ import annotations
@@ -18,6 +19,7 @@ from sqlalchemy import func, select
 from ..core.auth_utils import login_obrigatorio, resposta_ok
 from ..db import get_db
 from ..db.models import Caixa, Categoria, Parceiro, Produto, Usuario
+from .caixas import _resumos, serializar_caixa
 
 bp = Blueprint("dashboard", __name__)
 
@@ -56,10 +58,10 @@ def resumo_dashboard():
     ).one()
     valor = Decimal(str(valor_estoque or 0))
 
-    # Dinheiro: valor contado no último caixa FECHADO (a empresa do caixa é a de quem o abriu).
+    # Dinheiro: saldo geral do último caixa FECHADO (a empresa do caixa é a de quem o abriu).
     # Desempate por id quando dois fechamentos caem no mesmo segundo.
     ultimo_fechado = db.execute(
-        select(Caixa.id_caixa, Caixa.valor_contado, Caixa.fechado_em)
+        select(Caixa)
         .join(Usuario, Usuario.id_usuario == Caixa.aberto_por_usuario)
         .where(Usuario.id_empresa == id_empresa, Caixa.fechado_em.is_not(None))
         .order_by(Caixa.fechado_em.desc(), Caixa.id_caixa.desc())
@@ -67,11 +69,12 @@ def resumo_dashboard():
     ).first()
     dinheiro = None
     if ultimo_fechado is not None:
-        id_caixa, valor_contado, fechado_em = ultimo_fechado
+        caixa = ultimo_fechado[0]
+        saldo_geral = serializar_caixa(caixa, None, _resumos([caixa])[caixa.id_caixa])["saldo_geral"]
         dinheiro = {
-            "valor": f"{Decimal(valor_contado):.2f}",
-            "id_caixa": id_caixa,
-            "fechado_em": fechado_em.isoformat(),
+            "valor": saldo_geral,
+            "id_caixa": caixa.id_caixa,
+            "fechado_em": caixa.fechado_em.isoformat(),
         }
 
     return resposta_ok(
