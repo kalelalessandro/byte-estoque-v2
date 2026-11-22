@@ -68,6 +68,8 @@ de sessão funciona sem configuração extra de CORS.
    **Categorias** (criar, renomear, excluir categorias sem produtos),
    **Operações** (registrar vendas/compras: o estoque é atualizado e os títulos
    financeiros são gerados em 1x ou parcelados; parceiro é opcional),
+   **Equipe** (o dono cadastra, lista, edita e exclui funcionários; funcionários
+   usam o sistema normalmente, mas não podem excluir o dono),
    **Parceiros** (clientes e/ou fornecedores: inserir, acessar, alterar, apagar e
    registrar interações), e **Financeiro**, uma página com três abas: **Títulos**
    (contas a pagar e a receber; ao registrar um título o guia mostra as interações do
@@ -85,7 +87,8 @@ cd backend
 uv run pytest
 ```
 
-Resultado esperado: **373 passed, 4 skipped, 1 xfailed**.
+Resultado esperado: **382 passed, 12 skipped, 1 xfailed** (suíte de aceitação
+com os 395 casos do plano V1.6).
 
 > Os testes usam um hash de senha rápido (`PBKDF2`) **somente no ambiente de
 > teste**, para não gastar ~1 s por conta criada. Em produção o hash continua

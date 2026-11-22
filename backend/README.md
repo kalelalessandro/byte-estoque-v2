@@ -93,6 +93,10 @@ o `uv.lock` deve ser versionado no Git.
 | GET | `/api/operacoes/<id>` | **sim** | Detalhe da operação, itens e títulos gerados |
 | PATCH | `/api/operacoes/<id>` | **sim** | Altera operação concluída, refazendo estoque e títulos atomicamente |
 | POST | `/api/operacoes/<id>/cancelar` | **sim** | Cancela operação, estorna estoque e cancela títulos sem baixas |
+| GET | `/api/usuarios` | **sim** | Lista dono e funcionários da empresa |
+| POST | `/api/usuarios` | **sim** | Cria funcionário vinculado à empresa (cargo Funcionario) |
+| PATCH | `/api/usuarios/<id>` | **sim** | Atualiza nome, e-mail, telefone e/ou senha (funcionário não altera o Dono) |
+| DELETE | `/api/usuarios/<id>` | **sim** | Exclui funcionário; bloqueia dono, própria conta e histórico vinculado |
 | GET | `/api/titulos` | **sim** | Lista títulos (`busca`, `tipo`, `situacao`, `id_parceiro`, `limit`, `offset`) |
 | GET | `/api/titulos/<id>` | **sim** | Consulta título: saldo, situação, parceiro e histórico de baixas |
 | POST | `/api/titulos` | **sim** | Registra título manualmente (em aberto, sem baixas) |
@@ -372,10 +376,9 @@ uv run pytest tests/test_parceiros.py
 uv run pytest tests/test_interacoes.py
 ```
 
-Resultado esperado: **373 passed, 4 skipped, 1 xfailed** (3 skips de UI/E2E da
-autenticação + PRD-N22 de confirmação visual; o xfail é o LOG-P08, impossível
-pelo schema `usuarios.id_empresa NOT NULL`; veja
-[tests/README.md](tests/README.md)).
+Resultado esperado: **382 passed, 12 skipped, 1 xfailed** na suíte de
+aceitação (395 casos do plano V1.6; 6 skips são E2E e os outros são lacunas de
+escopo documentadas).
 
 > A suíte limpa os dados que cria (e-mails `@exemplo.com.br`, CNPJs de teste e
 > registros criados pela API) antes e depois de cada teste, sem apagar dados de
@@ -453,8 +456,10 @@ backend/
     ├── apoio_baixas.py       # títulos, caixas, operações, baixas e limpeza (BAI/TIT)
     ├── test_titulos.py       # TIT-Pxx / TIT-Nxx + SEG-N06/N09 + cancelar x baixar (concorrência)
     ├── test_caixas.py        # CXA-Pxx / CXA-Nxx + CON-N04 + abrir/fechar/lançar (concorrência)
-    ├── test_dashboard_dinheiro.py  # card Dinheiro do dashboard ligado ao fechamento do caixa
-    ├── test_fluxo_empresa.py # transação atômica + contexto de empresa
+    ├── test_plano_banco_complementar.py  # BDD/FKN/INTG/CAR/COL complementares
+    ├── test_plano_pendencias.py  # 7 casos do plano documentados como skip
+    ├── test_operacoes.py      # OPE-Pxx / OPE-Nxx + concorrência
+    ├── test_usuarios.py       # USR-Pxx / USR-Nxx + permissões Dono x Funcionário
     └── test_integridade_banco_auth.py  # BDD/FKN/INTG de autenticação
 ```
 

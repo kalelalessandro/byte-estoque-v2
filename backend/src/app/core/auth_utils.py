@@ -73,6 +73,16 @@ def serializar_empresa(empresa: Empresa) -> dict:
     }
 
 
+def eh_dono(usuario: Usuario) -> bool:
+    """Dono da empresa: cargo Administrador (ou flag global de admin do sistema)."""
+    if usuario.admin_sistema:
+        return True
+    return bool(
+        usuario.cargo is not None
+        and (usuario.cargo.cargo or "").strip().casefold() == "administrador"
+    )
+
+
 def serializar_usuario(usuario: Usuario, incluir_empresa: bool = True) -> dict:
     dados = {
         "id_usuario": usuario.id_usuario,
@@ -80,6 +90,7 @@ def serializar_usuario(usuario: Usuario, incluir_empresa: bool = True) -> dict:
         "email": usuario.email,
         "telefone": usuario.telefone,
         "admin_sistema": bool(usuario.admin_sistema),
+        "dono": eh_dono(usuario),
         "id_empresa": usuario.id_empresa,
         "id_cargo": usuario.id_cargo,
         "cargo": usuario.cargo.cargo if usuario.cargo is not None else None,
