@@ -40,7 +40,7 @@ function createTasks() {
   const sql = (texto, params = []) => db().query(texto, params);
 
   return {
-    /** Apaga empresas, usuários, categorias e produtos criados pelos testes. */
+    /** Apaga empresas, usuários, catálogo, parceiros e financeiro criados pelos testes. */
     async 'db:cleanup'() {
       const [empresas] = await sql(
         'SELECT DISTINCT id_empresa FROM usuarios WHERE email LIKE ?',
@@ -50,6 +50,13 @@ function createTasks() {
       const ids = empresas.map((e) => e.id_empresa);
 
       // Ordem importa: quem depende (FK RESTRICT) é apagado primeiro.
+      await sql(
+        `DELETE b FROM baixas_financeiras b
+           JOIN titulos_financeiros t ON t.id_titulo = b.id_titulo
+          WHERE t.id_empresa IN (?)`,
+        [ids],
+      );
+      await sql('DELETE FROM titulos_financeiros WHERE id_empresa IN (?)', [ids]);
       await sql(
         `DELETE oi FROM operacao_itens oi
            JOIN operacoes o ON o.id_operacao = oi.id_operacao
@@ -63,6 +70,26 @@ function createTasks() {
           WHERE u.email LIKE ?`,
         [PADRAO_EMAIL_E2E],
       );
+      await sql(
+        `DELETE oc FROM operacoes_caixa oc
+           JOIN caixas c ON c.id_caixa = oc.id_caixa
+           JOIN usuarios u ON u.id_usuario = c.aberto_por_usuario
+          WHERE u.email LIKE ?`,
+        [PADRAO_EMAIL_E2E],
+      );
+      await sql(
+        `DELETE c FROM caixas c
+           JOIN usuarios u ON u.id_usuario = c.aberto_por_usuario
+          WHERE u.email LIKE ?`,
+        [PADRAO_EMAIL_E2E],
+      );
+      await sql(
+        `DELETE i FROM interacoes i
+           JOIN parceiros p ON p.id_parceiro = i.id_parceiro
+          WHERE p.id_empresa IN (?)`,
+        [ids],
+      );
+      await sql('DELETE FROM parceiros WHERE id_empresa IN (?)', [ids]);
       await sql('DELETE FROM produtos WHERE id_empresa IN (?)', [ids]);
       await sql('DELETE FROM categorias WHERE id_empresa IN (?)', [ids]);
       await sql('DELETE FROM usuarios WHERE email LIKE ?', [PADRAO_EMAIL_E2E]);

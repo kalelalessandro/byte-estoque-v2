@@ -13,3 +13,8 @@ scriptsDEMO
 
 # Dependências do projeto
 **/node_modules/
+
+# Cypress/E2E temporários
+e2e/.cypress-cache/
+e2e/.npm-cache/
+e2e/.tmp/
