@@ -49,6 +49,9 @@ def create_app(configuracao: dict | None = None) -> Flask:
     app.config.from_mapping(
         SECRET_KEY=os.environ.get("FLASK_SECRET_KEY") or SECRET_KEY_DEV,
         PERMANENT_SESSION_LIFETIME=timedelta(hours=8),
+        # Não renova o cookie de sessão a cada GET: requisições de prefetch que
+        # terminam depois do logout não podem ressuscitar a sessão encerrada.
+        SESSION_REFRESH_EACH_REQUEST=False,
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",
         SESSION_COOKIE_SECURE=False,  # dev local (HTTP); use True em produção/HTTPS

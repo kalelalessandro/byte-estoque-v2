@@ -1,69 +1,86 @@
 # Byte Estoque — testes E2E (Cypress)
 
-Baseados no **Plano de Testes V1.2**. Esta pasta fica na **raiz do projeto**, ao lado de
-`backend/`, `frontend/` e `database/` (a task de banco lê `../database/.env`).
+Suíte E2E da versão atual do sistema, alinhada ao **Plano de Testes V1.6**. Fica na
+raiz do projeto, ao lado de `backend/`, `frontend/` e `database/`.
+
+## Estrutura
 
 ```
-byte-estoque-v2/
-├── backend/  frontend/  database/
-└── e2e/                          <── esta pasta
-    ├── cypress.config.js
-    ├── package.json
-    └── cypress/
-        ├── e2e/jornada/
-        │   ├── jornada-completa.cy.js     29 passos: conta > categoria > produto > ... > apagar categoria
-        │   └── jornada-isolamento.cy.js    8 passos: duas empresas + acesso sem login
-        ├── support/  e2e.js (NOVO)  commands.js (NOVO)  data.js  utils.js
-        ├── tasks/db.js
-        └── shared/documents.js
+e2e/
+├── cypress.config.js
+├── cypress/
+│   ├── e2e/jornada/
+│   │   ├── jornada-completa.cy.js   # jornada completa (todos os módulos)
+│   │   └── jornada-isolamento.cy.js # multi-tenant A × B + segurança
+│   ├── support/
+│   │   ├── commands.js              # comandos de tela e API
+│   │   ├── data.js                  # massa válida e e-mails de teste
+│   │   └── utils.js
+│   ├── tasks/db.js                  # limpeza e consultas diretas no MySQL
+│   └── shared/documents.js          # CNPJ/CPF
+├── package.json
+└── README.md
 ```
 
 ## Como rodar
 
-Banco, API e front no ar (veja o README da raiz), depois:
+Banco, API e front no ar (veja o README da raiz):
 
 ```powershell
 cd e2e
-npm install
+npm ci
+npm run test:jornada    # todas as jornadas no terminal
 npm run open            # modo interativo
-npm run test:jornada    # as duas jornadas, no terminal
 ```
 
-Outra URL do front: `$env:BASE_URL="http://localhost:4173"; npm run test:jornada`.
+Outra URL do front:
 
-## O que a jornada completa cobre
+```powershell
+$env:BASE_URL="http://localhost:4173"; npm run test:jornada
+```
 
-| Passos | Fluxo | Casos do plano |
-|---|---|---|
-| JOR-01 a 05 | Tela inicial, cadastro em 2 etapas (validações, CNPJ inválido, "Voltar"), entrada no sistema, dashboard zerado | LOG-P01, LOG-N13/14/16, EMP-N02/06/16, EMP-P06/P09 |
-| JOR-06 a 07 | Criar categoria (vazia, duplicada, ordem alfabética) | CAT-P01, CAT-N01, CAT-N05 |
-| JOR-08 a 10 | Criar 3 produtos (completo, sem estoque, preço 0,00, SKU repetido), buscar, conferir dashboard | PRD-P01/02/03, PRD-N15/16 |
-| JOR-11 a 14 | Atualizar produto (cancelar, SKU duplicado, nome/descrição/SKU/preço/estoque, mudar de categoria) e recalcular dashboard | PRD-P09 a P12, PRD-N17 |
-| JOR-15 a 17 | Vínculo categoria × produto, apagar produtos (cancelar e confirmar) | PRD-P13, PRD-N22 |
-| JOR-18 a 19 | Renomear categoria (produto continua vinculado, nome duplicado, vazio) | CAT-P04/P05, CAT-N06/N07 |
-| JOR-20 a 22 | Apagar categoria (só sem produtos); produto em operação não pode ser apagado | PRD-N21 |
-| JOR-23 a 27 | Sessão: recarregar, sair, login errado, login com e-mail em maiúsculas, hash da senha | LOG-N03/04/05, LOG-P10, BDD-P08 |
-| JOR-28 a 29 | Cadastro repetido (e-mail e CNPJ) | LOG-N10/11, EMP-N10/12 |
-| ISO-01 a 08 | Empresa B não vê, não altera e não apaga nada de A; sem login = 401 | SEG-P01, SEG-N01/02/09/11/12, CAT-P03, PRD-P07 |
+A limpeza (`cypress/tasks/db.js`) apaga somente dados criados pela suíte, com e-mails
+`@e2e.exemplo.com.br`, e remove na ordem correta baixas, títulos, itens/operações,
+movimentos/caixas, interações/parceiros, produtos, categorias, usuários e empresas.
 
-Os `it` são encadeados (`testIsolation: false`): o resultado de um é a pré-condição do próximo.
-Se um falhar, os seguintes também falham — corrija sempre o primeiro vermelho.
+Resultado atual: **48/48 passando** (37 da jornada completa + 11 de isolamento).
 
-## O que o plano prevê e o sistema ainda não tem
+## Jornada completa
 
-Parceiros, Interações, Operações, Títulos, Baixas e Caixa aparecem como "em breve" na sidebar,
-então os ~250 casos desses módulos não têm tela para testar. Conforme cada módulo ficar pronto,
-a jornada ganha os passos novos (ex.: criar parceiro > criar venda > gerar título > baixar > fechar caixa).
+`jornada-completa.cy.js` é encadeada (`testIsolation: false`): cada passo usa o
+resultado do anterior. Ela cobre:
 
-## Diferenças entre o plano e o sistema atual (vale alinhar)
+| Passos | Fluxo |
+|---|---|
+| JOR-01 a 05 | Landing, cadastro em 2 etapas (validações, CNPJ inválido, Voltar), login automático, dashboard zerado |
+| JOR-06 a 10 | Categorias (criar, duplicada, ordem), produtos (completo, sem estoque, preço 0,00, SKU repetido), busca e dashboard |
+| JOR-11 a 17 | Edição de produto, categoria, exclusões e dashboard |
+| JOR-18 a 22 | Categoria × produto, exclusão segura, produto em operação |
+| JOR-23 a 29 | Sessão, login errado/maiúsculo, hash, cadastros repetidos |
+| JOR-30 a 31 | Categoria e produto para a operação |
+| JOR-32 | Parceiro + interação de compra |
+| JOR-33 a 34 | Venda em 2 parcelas com parceiro, título gerado e estoque reduzido |
+| JOR-35 | Caixa (abrir, suprimento, baixa de título e fechamento), dashboard Dinheiro |
+| JOR-36 a 37 | Funcionário: criar, login, permissão sobre o Dono, exclusão pelo Dono |
 
-1. **Empresa no cadastro.** O plano descreve cadastro de usuário e *depois* uma página
-   "Cadastrar empresa" (LOG-P02, EMP-P01...). O sistema faz tudo em um wizard de 2 etapas, numa
-   transação só. Os casos EMP-* foram adaptados para a etapa 2.
-2. **EMP-P09 (CEP `52.060-110`).** O campo CEP tem `maxLength=9`; o valor do plano tem 10
-   caracteres e é cortado na digitação. Use `52060-110` ou ajuste o plano.
-3. **Validação nativa do navegador.** Em Produtos, preço e estoque são `type="number"` com
-   `min`/`step`, então PRD-N08/N09/N11/N14 (negativo, decimal, 3 casas) são barrados pelo
-   navegador antes de chegar à API. Esses casos continuam válidos via `cy.request`/pytest.
-4. **Plano vs. UI em "apagar categoria com produtos".** O botão fica desabilitado (a API também
-   responde 409). O teste confere os dois lados.
+## Jornada de isolamento
+
+`jornada-isolamento.cy.js` cobre duas empresas no mesmo sistema:
+
+- Empresa A criada pela API com categoria/produto;
+- Empresa B se cadastra pela tela e começa vazia;
+- B pode repetir nome de categoria e SKU de A;
+- B recebe `404` ao tentar ler/alterar/apagar dados de A;
+- B não usa categoria de A nem forja `id_empresa`;
+- Login sem sessão retorna `401` e a tela volta ao início;
+- A permanece intacta ao final.
+
+## Diferenças conhecidas da UI × API
+
+- O cadastro é um wizard de duas etapas, mas a transação é única no backend.
+- Campos `type="number"` (preço/estoque) barram alguns valores no navegador antes da API;
+  esses casos continuam cobertos pelo pytest de API.
+- A exclusão de categoria com produtos fica desabilitada na tela e também responde
+  `409` na API.
+- O botão de exclusão do Dono não aparece para Funcionário; a API também bloqueia
+  com `403`.

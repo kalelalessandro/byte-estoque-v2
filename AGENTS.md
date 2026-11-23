@@ -20,6 +20,8 @@ Sistema SaaS multi-tenant de **CRM, Controle de Estoque e Gestão Financeira** (
   - ✅ Módulo de Operações implementado (vendas/compras, estoque, títulos 1x/parcelados, edição, cancelamento + testes).
   - ✅ Módulo de Gestão de Usuários/Funcionários implementado (cargos Dono/Funcionário, CRUD, permissões de exclusão e isolamento + testes).
   - ✅ Plano de testes V1.6 finalizado: 395 casos, suíte pytest com exatamente 395 testes (382 passed, 12 skipped, 1 xfailed), sem testes ocultos/deselected e casos E2E documentados como skip.
+  - ✅ E2E Cypress atualizados para a UI V1.6: jornada completa com todos os módulos, isolamento multi-tenant e limpeza de banco ampliada.
+  - ✅ Suíte E2E validada: 48/48 testes passando (37 da jornada completa + 11 de isolamento).
   - ✅ Módulos finalizados: autenticação, produtos/categorias, parceiros/interações, financeiro/caixa, operações e usuários.
 
 ---

@@ -3,7 +3,7 @@
 //   Empresa A (criada pela API) tem categoria e produto  >  Empresa B se cadastra pela tela
 //   > B não enxerga nada de A > B reutiliza os mesmos nomes/SKU > B tenta mexer em A > sem login
 //
-// Casos do Plano de Testes V1.2 exercitados: SEG-P01, SEG-N01, SEG-N02, SEG-N09, SEG-N11,
+// Casos do Plano de Testes V1.6 exercitados: SEG-P01, SEG-N01, SEG-N02, SEG-N09, SEG-N11,
 // SEG-N12, CAT-P03, PRD-P07. `testIsolation: false` pelo mesmo motivo da jornada completa
 // (os passos são encadeados).
 import { cnpj, email, montarUsuario, montarEmpresa } from '../../support/data';
@@ -176,5 +176,112 @@ describe('Jornada de isolamento entre empresas', { testIsolation: false }, () =>
 
     cy.menu('Categorias');
     cy.contains('tbody tr', CATEGORIA).should('contain', '1 produto'); // não foi renomeada nem apagada
+  });
+
+  let idParceiroA;
+  let idTituloA;
+  let idCaixaA;
+
+  it('ISO-09 | Empresa A cria parceiro, título e caixa para testar os módulos novos', () => {
+    // A continua logada desde o ISO-08 (sessão do teste encadeado).
+    cy.apiCriarParceiro({
+      nome: 'Parceiro da Empresa A',
+      email: 'parceiro.iso.a@e2e.exemplo.com.br',
+      e_cliente: true,
+    }).then((parceiro) => {
+      idParceiroA = parceiro.id_parceiro;
+      cy.apiCriarTitulo({
+        tipo: 'a receber',
+        id_parceiro: idParceiroA,
+        valor: '40.00',
+        vencimento: '2026-12-20',
+        descricao: 'Título da Empresa A',
+      }).then((titulo) => {
+        idTituloA = titulo.id_titulo;
+      });
+    });
+    cy.apiAbrirCaixa('50.00').then((caixa) => {
+      idCaixaA = caixa.id_caixa;
+    });
+  });
+
+  it('ISO-10 | Empresa B não acessa parceiro, título nem caixa da Empresa A', () => {
+    cy.apiSair();
+    cy.apiEntrar(contaB.usuario.email, contaB.usuario.senha)
+      .its('status')
+      .should('eq', 200);
+
+    cy.request(semFalhar({ url: `/api/parceiros/${idParceiroA}` }))
+      .its('status')
+      .should('eq', 404);
+    cy.request(semFalhar({ url: `/api/titulos/${idTituloA}` }))
+      .its('status')
+      .should('eq', 404);
+    cy.request(semFalhar({ url: `/api/caixas/${idCaixaA}` }))
+      .its('status')
+      .should('eq', 404);
+
+    cy.request('/api/parceiros').its('body.dados.total').should('eq', 0);
+    cy.request('/api/titulos').its('body.dados.total').should('eq', 0);
+    cy.request('/api/caixas/atual')
+      .its('body.dados.caixa')
+      .should('eq', null);
+
+    cy.request(
+      semFalhar({
+        method: 'POST',
+        url: '/api/baixas',
+        body: {
+          id_titulo: idTituloA,
+          id_caixa: idCaixaA,
+          valor: '40.00',
+          forma_pagamento: 'dinheiro',
+          realizado_em: '2026-11-23 10:00',
+        },
+      }),
+    ).then((resposta) => {
+      expect([404, 422]).to.include(resposta.status);
+    });
+
+    cy.request('/api/produtos').then((resposta) => {
+      const produtoB = resposta.body.dados.produtos[0];
+      cy.request(
+        semFalhar({
+          method: 'POST',
+          url: '/api/operacoes',
+          body: {
+            tipo: 'venda',
+            id_parceiro: idParceiroA,
+            itens: [
+              {
+                id_produto: produtoB.id_produto,
+                quantidade: 1,
+                valor_unitario: '1.00',
+              },
+            ],
+            parcelas: 1,
+            vencimento: '2026-12-20',
+          },
+        }),
+      ).then((operacao) => {
+        expect([404, 422]).to.include(operacao.status);
+      });
+    });
+  });
+
+  it('ISO-11 | Empresa A confirma os próprios dados intactos no final', () => {
+    cy.apiEntrar(contaA.usuario.email, contaA.usuario.senha)
+      .its('status')
+      .should('eq', 200);
+
+    cy.request(`/api/parceiros/${idParceiroA}`)
+      .its('body.dados.nome')
+      .should('eq', 'Parceiro da Empresa A');
+    cy.request(`/api/titulos/${idTituloA}`)
+      .its('body.dados.descricao')
+      .should('eq', 'Título da Empresa A');
+    cy.request(`/api/caixas/${idCaixaA}`)
+      .its('body.dados.id_caixa')
+      .should('eq', idCaixaA);
   });
 });

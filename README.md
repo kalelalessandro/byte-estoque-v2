@@ -94,6 +94,20 @@ com os 395 casos do plano V1.6).
 > teste**, para não gastar ~1 s por conta criada. Em produção o hash continua
 > sendo `scrypt`.
 
+### E2E (Cypress)
+
+Com banco, API e front no ar:
+
+```powershell
+cd e2e
+npm ci
+npm run test:jornada
+```
+
+As jornadas cobrem cadastro/login, catálogo, parceiros/interações, operações,
+títulos, caixa, baixas, equipe e isolamento entre empresas. A jornada completa
+está em `e2e/cypress/e2e/jornada/jornada-completa.cy.js`.
+
 ## 5. Build de produção do front-end (opcional)
 
 ```powershell

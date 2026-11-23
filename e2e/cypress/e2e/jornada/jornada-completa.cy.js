@@ -8,7 +8,7 @@
 // por isso `testIsolation: false` mantém a sessão e a página entre eles. Se um passo
 // falhar, os seguintes também falham — comece sempre pelo primeiro vermelho.
 //
-// Os códigos entre parênteses (EMP-N10, PRD-N15...) apontam o caso do Plano de Testes V1.2
+// Os códigos entre parênteses (EMP-N10, PRD-N15...) apontam o caso do Plano de Testes V1.6
 // que cada passo exercita.
 import {
   cnpj,
@@ -92,7 +92,7 @@ describe('Jornada completa do usuário', { testIsolation: false }, () => {
     cy.contains('button', 'Criar conta').should('be.visible');
     cy.contains('button', 'Entrar').should('be.visible');
     cy.contains('button', 'Já tenho conta').should('be.visible');
-    cy.get('svg.marca-dagua').should('exist'); // folha canadense cinza
+    cy.get('.marca__folha').should('exist'); // folha canadense cinza
   });
 
   it('JOR-02 | Etapa 1 do cadastro valida os dados de acesso antes de avançar (LOG-N13/N14/N16)', () => {
@@ -161,11 +161,11 @@ describe('Jornada completa do usuário', { testIsolation: false }, () => {
     cy.contains('h1', 'Início').should('be.visible');
     cy.get('.app-topo__dados').should('contain', empresa.razao_social);
     cy.get('.wip-painel').should('contain', '(WORK IN PROGRESS)');
-    cy.get('svg.marca-dagua').should('exist');
+    cy.get('svg.marca__folha').should('exist');
 
     // Módulos que ainda não existem aparecem desabilitados na sidebar.
     cy.get('button.sidebar__item--futuro')
-      .should('have.length', 3)
+      .should('have.length', 1)
       .each(($botao) => expect($botao).to.be.disabled);
   });
 
@@ -559,5 +559,175 @@ describe('Jornada completa do usuário', { testIsolation: false }, () => {
 
     // Nada foi criado pelos dois cadastros recusados.
     cy.task('db:usuario', { email: email(`outro.${sufixo.toLowerCase()}`) }).should('equal', null);
+  });
+
+  // ================================================== 11. MÓDULOS NOVOS ===
+  // A partir daqui a jornada cobre Parceiros, Operações, Financeiro e Equipe,
+  // integrando estoque, títulos, caixa, baixa e usuários na mesma conta.
+
+  const FUNCIONARIO = {
+    nome: 'Funcionário Jornada',
+    email: email(`func.jornada.${sufixo.toLowerCase()}`),
+    senha: 'Func#123',
+  };
+  const PARCEIRO = {
+    nome: 'Cliente Jornada',
+    email: email(`cliente.jornada.${sufixo.toLowerCase()}`),
+  };
+  const CATEGORIA_OPE = 'Operações E2E';
+  const PRODUTO_OPE = {
+    sku: 'E2E-OPE-001',
+    nome: 'Produto da Operação',
+    preco: '20.00',
+  };
+
+  it('JOR-30 | Volta ao início e entra com a conta dona', () => {
+    cy.contains('button', 'Voltar para o início').click();
+    cy.entrarPelaTela(usuario.email, usuario.senha);
+    cy.contains('h2', 'Olá, Marina!').should('be.visible');
+  });
+
+  it('JOR-31 | Cria categoria e produto que serão movimentados pela operação', () => {
+    cy.menu('Categorias');
+    criarCategoria(CATEGORIA_OPE);
+    cy.contains('.alerta--sucesso', 'Categoria criada com sucesso.');
+
+    cy.menu('Produtos');
+    abrirNovoProduto();
+    cy.get('#produto-categoria option').contains(CATEGORIA_OPE).should('exist');
+    preencherProduto({
+      ...PRODUTO_OPE,
+      categoria: CATEGORIA_OPE,
+      descricao: 'Produto usado na jornada de operações',
+      unidade_estoque: 5,
+    });
+    cy.get('#produto-categoria').select(CATEGORIA_OPE);
+    cy.contains('[role="dialog"] button', 'Criar produto').click();
+    cy.get('[role="dialog"]').should('not.exist');
+    linha(PRODUTO_OPE.sku).within(() => {
+      cy.contains(PRODUTO_OPE.nome);
+      cy.contains('5 un.');
+      cy.contains(/R\$\s*20,00/);
+    });
+  });
+
+  it('JOR-32 | Cadastra parceiro e registra a interação de compra', () => {
+    cy.menu('Parceiros');
+    cy.contains('button', 'Inserir parceiro novo').click();
+    preencher('#parceiro-nome', PARCEIRO.nome);
+    preencher('#parceiro-email', PARCEIRO.email);
+    cy.contains('[role="dialog"] button', 'Salvar parceiro').click();
+
+    cy.get('[role="dialog"]').should('contain', PARCEIRO.nome);
+    cy.contains('[role="dialog"] button', 'Registrar interação').click();
+    preencher('#interacao-canal', 'Compra');
+    preencher('#interacao-descricao', 'Compra combinada para a jornada completa');
+    cy.contains('[role="dialog"] button', 'Salvar interação').click();
+    cy.get('[role="dialog"]').should(
+      'contain',
+      'Compra combinada para a jornada completa',
+    );
+    cy.fecharDialogo();
+  });
+
+  it('JOR-33 | Registra venda de 2 unidades vinculada ao parceiro, em 2 parcelas', () => {
+    cy.menu('Operações');
+    cy.contains('button', 'Nova operação').click();
+    cy.get('#operacao-parceiro option').contains(PARCEIRO.nome).should('exist');
+    cy.get('#item-produto-0 option').contains(PRODUTO_OPE.sku).should('exist');
+
+    cy.get('#operacao-tipo').select('venda');
+    cy.selecionarOpcao('#operacao-parceiro', PARCEIRO.nome);
+    cy.get('#operacao-parcelas').clear().type('2');
+    cy.selecionarOpcao('#item-produto-0', PRODUTO_OPE.sku);
+    cy.get('#item-quantidade-0').clear().type('2');
+    cy.get('#item-valor-0').clear().type(PRODUTO_OPE.preco);
+    cy.contains('[role="dialog"] button', 'Registrar operação').click();
+
+    cy.contains('.alerta--sucesso', 'Operação registrada e título financeiro gerado.');
+    cy.contains('tbody tr', PARCEIRO.nome).within(() => {
+      cy.contains('Venda');
+      cy.contains('2x (2x)');
+    });
+  });
+
+  it('JOR-34 | Estoque do produto cai de 5 para 3 e o dashboard acompanha', () => {
+    cy.menu('Produtos');
+    linha(PRODUTO_OPE.sku).should('contain', '3 un.');
+  });
+
+  it('JOR-35 | Abre caixa, registra movimento, dá baixa em título e fecha o caixa', () => {
+    cy.menu('Financeiro');
+    cy.get('#aba-caixas').click();
+    cy.contains('button', 'Abrir caixa').click();
+    preencher('#caixa-abertura', '100,00');
+    cy.get('[role="dialog"]').contains('button', 'Abrir caixa').click();
+    cy.contains('.alerta--sucesso', 'Caixa aberto com sucesso.');
+    cy.contains('h3', /Caixa #\d+/).should('be.visible');
+
+    cy.contains('button', 'Registrar suprimento/sangria').click();
+    cy.get('#mov-tipo').select('suprimento');
+    preencher('#mov-valor', '10,00');
+    preencher('#mov-descricao', 'Reforço de troco da jornada');
+    cy.get('[role="dialog"]').contains('button', 'Salvar').click();
+    cy.contains('.alerta--sucesso', 'Suprimento registrado').should('be.visible');
+
+    cy.get('#aba-baixas').click();
+    cy.contains('button', 'Registrar baixa manualmente').click();
+    cy.get('#baixa-titulo option').should(($opcoes) => {
+      expect($opcoes.length).to.be.greaterThan(1);
+    });
+    cy.selecionarOpcao('#baixa-titulo', 'Venda #');
+    cy.get('#baixa-forma').select('dinheiro');
+    cy.contains('button', 'Usar o saldo total').click();
+    cy.contains('[role="dialog"] button', 'Salvar & registrar baixa').click();
+    cy.contains('.alerta--sucesso', 'Baixa registrada').should('be.visible');
+
+    cy.get('#aba-caixas').click();
+    cy.contains('button', 'Fechar caixa').click();
+    // Abertura 100 + suprimento 10 + recebimento 20 = 130.
+    preencher('#caixa-contado', '130,00');
+    cy.get('[role="dialog"]').contains('button', 'Confirmar fechamento').click();
+    cy.contains('.alerta--sucesso', 'Caixa fechado com sucesso.').should('be.visible');
+
+    cy.menu('Início');
+    cy.contains('.metrica__rotulo', 'Dinheiro')
+      .parent('.metrica')
+      .find('.metrica__valor')
+      .should('contain.text', '130,00');
+  });
+
+  it('JOR-36 | Cria funcionário e confirma que ele acessa a mesma empresa', () => {
+    cy.menu('Equipe');
+    cy.contains('button', 'Novo funcionário').click();
+    preencher('#usuario-nome', FUNCIONARIO.nome);
+    preencher('#usuario-email', FUNCIONARIO.email);
+    preencher('#usuario-telefone', '81999990000');
+    preencher('#usuario-senha', FUNCIONARIO.senha);
+    cy.contains('[role="dialog"] button', 'Criar funcionário').click();
+    cy.contains('tbody tr', FUNCIONARIO.nome).should('be.visible');
+    cy.contains('tbody tr', usuario.nome).should('contain', 'Dono');
+
+    cy.sairPelaTela();
+    cy.entrarPelaTela(FUNCIONARIO.email, FUNCIONARIO.senha);
+    cy.contains('h2', 'Olá, Funcionário!').should('be.visible');
+    cy.menu('Equipe');
+    cy.contains('tbody tr', usuario.nome).should('contain', 'Dono');
+    cy.contains('tbody tr', usuario.nome)
+      .find('button[aria-label^="Excluir"]')
+      .should('not.exist');
+  });
+
+  it('JOR-37 | Dono volta, apaga o funcionário e encerra a jornada', () => {
+    cy.sairPelaTela();
+    cy.entrarPelaTela(usuario.email, usuario.senha);
+    cy.menu('Equipe');
+    cy.window().then((win) => cy.stub(win, 'confirm').returns(true));
+    cy.get(`button[aria-label="Excluir ${FUNCIONARIO.nome}"]`).click();
+    cy.contains('.alerta--sucesso', 'Funcionário excluído com sucesso.').should(
+      'be.visible',
+    );
+    cy.contains('tbody tr', FUNCIONARIO.nome).should('not.exist');
+    cy.sairPelaTela();
   });
 });
