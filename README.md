@@ -90,6 +90,16 @@ uv run pytest
 Resultado esperado: **382 passed, 12 skipped, 1 xfailed** (suíte de aceitação
 com os 395 casos do plano V1.6).
 
+Para gerar a cobertura do backend (linhas + branches):
+
+```powershell
+cd backend
+uv run pytest --cov=src/app --cov-report=term-missing --cov-report=html
+```
+
+O relatório navegável fica em `backend/htmlcov/index.html`; o resumo também é
+impresso no terminal. Cobertura atual: **77,1%**.
+
 > Os testes usam um hash de senha rápido (`PBKDF2`) **somente no ambiente de
 > teste**, para não gastar ~1 s por conta criada. Em produção o hash continua
 > sendo `scrypt`.

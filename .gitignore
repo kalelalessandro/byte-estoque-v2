@@ -18,3 +18,8 @@ scriptsDEMO
 e2e/.cypress-cache/
 e2e/.npm-cache/
 e2e/.tmp/
+
+# Relatórios de coverage
+backend/.coverage
+backend/coverage.xml
+backend/htmlcov/
