@@ -1,0 +1,15 @@
+{
+  "name": "byte-estoque-e2e",
+  "version": "1.6.0",
+  "private": true,
+  "description": "Testes E2E (Cypress) do Byte Estoque, alinhados ao Plano de Testes V1.6.",
+  "scripts": {
+    "open": "cypress open",
+    "test": "cypress run",
+    "test:jornada": "cypress run --spec \"cypress/e2e/jornada/**\""
+  },
+  "devDependencies": {
+    "cypress": "^13.17.0",
+    "mysql2": "^3.11.0"
+  }
+}

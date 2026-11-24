@@ -1,0 +1,25 @@
+.env
+*.env.local
+
+# Python / backend
+__pycache__/
+*.py[cod]
+.venv/
+backend/.tmp/
+backend/.uv-cache/
+.pytest_cache/
+pytest-cache-files-*/
+scriptsDEMO
+
+# Dependências do projeto
+**/node_modules/
+
+# Cypress/E2E temporários
+e2e/.cypress-cache/
+e2e/.npm-cache/
+e2e/.tmp/
+
+# Relatórios de coverage
+backend/.coverage
+backend/coverage.xml
+backend/htmlcov/
