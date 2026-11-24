@@ -58,6 +58,8 @@ uv sync                        # cria/atualiza a venv e instala o pytest (grupo 
 
 uv run pytest                  # suíte de aceitação: 395 casos do plano
 uv run pytest -v               # nome de cada caso
+uv run pytest --cov=src/app --cov-report=term-missing --cov-report=html
+                              # cobertura (terminal + backend/htmlcov/index.html)
 uv run pytest tests/test_login.py            # só LOG
 uv run pytest tests/test_cadastro_empresa.py # só EMP
 uv run pytest tests/test_categorias.py       # só CAT

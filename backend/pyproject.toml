@@ -14,6 +14,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "pytest==9.2.0",
+    "pytest-cov>=7.1.0",
 ]
 
 # Projeto é uma aplicação (não um pacote instalável): o uv apenas sincroniza
@@ -28,3 +29,25 @@ addopts = ["-ra", "-p", "no:cacheprovider"]
 markers = [
     "banco: testes que executam SQL direto no MySQL (BDD/FKN/INTG)",
 ]
+
+[tool.coverage.run]
+source = ["src/app"]
+branch = true
+relative_files = true
+omit = [
+    "src/app/main.py",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true
+precision = 1
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+]
+
+[tool.coverage.html]
+directory = "htmlcov"
+title = "Byte Estoque - cobertura pytest"
